@@ -43,7 +43,7 @@ impl Default for TileMapBundle {
 }
 
 #[derive(Bundle)]
-pub struct ChunkBundle {
+pub(crate) struct ChunkBundle {
     pub chunk: Chunk,
     pub texture_atlas: Handle<TextureAtlas>,
     pub draw: Draw,

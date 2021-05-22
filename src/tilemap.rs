@@ -20,9 +20,9 @@ const TILES_PER_CHUNK: usize = (CHUNK_WIDTH * CHUNK_HEIGHT) as usize;
 
 #[derive(Debug, Default)]
 pub struct Chunk {
-    pub origin: IVec3,
-    pub tiles: Vec<Option<Tile>>,
-    pub needs_remesh: bool,
+    origin: IVec3,
+    tiles: Vec<Option<Tile>>,
+    needs_remesh: bool,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -33,13 +33,13 @@ pub struct Tile {
 
 #[derive(Default)]
 pub struct TileMap {
-    pub tile_changes: Vec<(IVec3, Option<Tile>)>,
-    pub chunks: HashMap<IVec3, Entity>,
+    tile_changes: Vec<(IVec3, Option<Tile>)>,
+    chunks: HashMap<IVec3, Entity>,
 }
 
 #[derive(Default)]
 pub struct TileMapCache {
-    pub tile_changes_by_chunk: HashMap<IVec3, Vec<(IVec3, Option<Tile>)>>,
+    tile_changes_by_chunk: HashMap<IVec3, Vec<(IVec3, Option<Tile>)>>,
 }
 
 impl Chunk {

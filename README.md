@@ -43,9 +43,9 @@ fn setup(
 ### Updating (or inserting) tiles:
 ```rust
 // List to store set tile operations
-let mut tiles: Vec<(IVec2, Option<Tile>)> = Vec::new();
-tiles.push((IVec2::new(0, 0), Some(Tile { sprite_index: 0, color: Color::WHITE })));
-tiles.push((IVec2::new(1, 0), Some(Tile { sprite_index: 1, color: Color::WHITE })));
+let mut tiles: Vec<(IVec3, Option<Tile>)> = Vec::new();
+tiles.push((IVec3::new(0, 0, 0), Some(Tile { sprite_index: 0, color: Color::WHITE })));
+tiles.push((IVec3::new(1, 0, 0), Some(Tile { sprite_index: 1, color: Color::WHITE })));
 
 // Perform tile update
 tilemap.set_tiles(tiles);

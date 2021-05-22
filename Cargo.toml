@@ -3,6 +3,9 @@ name = "bevy_simple_tilemap"
 version = "0.1.0"
 authors = ["Forb.Jok <forbjok@gmail.com>"]
 edition = "2018"
+description = "Refreshingly simple tilemap implementation for Bevy Engine."
+license = "MIT/Apache-2.0"
+repository = "https://github.com/forbjok/bevy_simple_tilemap.git"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

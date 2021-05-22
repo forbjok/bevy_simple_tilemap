@@ -13,7 +13,7 @@ fn main() {
         .run();
 }
 
-/// Draw line of foreground (layer 0) tiles, moving it up by one each time
+/// Draw line of foreground (layer 1) tiles, moving it up by one each time
 fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<i32>) {
     let upd_tiles = Instant::now();
 
@@ -37,7 +37,7 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<i32>) {
 
             for x in 0..10 {
                 // Add tile change
-                tiles.push((IVec3::new(x, y, 0), tile.clone()));
+                tiles.push((IVec3::new(x, y, 1), tile.clone()));
             }
         }
 
@@ -58,11 +58,11 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atl
 
     let mut tiles = Vec::new();
 
-    // Background (layer -1) tiles
+    // Background (layer 0) tiles
     for y in 0..10 {
         for x in 0..10 {
             tiles.push((
-                IVec3::new(x, y, -1),
+                IVec3::new(x, y, 0),
                 Some(Tile {
                     sprite_index: 2,
                     ..Default::default()

@@ -153,6 +153,7 @@ pub(crate) fn update_chunk_system(
                         chunk,
                         texture_atlas: texture_atlas_handle.clone(),
                         mesh,
+                        transform: Transform::from_translation(Vec3::new(0.0, 0.0, chunk_origin.z as f32)),
                         ..Default::default()
                     })
                     .id();

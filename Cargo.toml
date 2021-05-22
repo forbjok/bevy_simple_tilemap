@@ -13,5 +13,5 @@ repository = "https://github.com/forbjok/bevy_simple_tilemap.git"
 bevy = "0.5.0"
 
 [[example]]
-name = "simple"
-path = "examples/simple.rs"
+name = "benchmark"
+path = "examples/benchmark.rs"

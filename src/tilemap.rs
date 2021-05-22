@@ -61,7 +61,11 @@ impl TileMap {
 
 /// Calculate chunk position based on tile position
 fn calc_chunk_pos(tile_pos: IVec3) -> IVec3 {
-    IVec3::new(tile_pos.x / CHUNK_WIDTH_I32, tile_pos.y / CHUNK_HEIGHT_I32, tile_pos.z)
+    IVec3::new(
+        tile_pos.x.div_euclid(CHUNK_WIDTH_I32),
+        tile_pos.y.div_euclid(CHUNK_HEIGHT_I32),
+        tile_pos.z,
+    )
 }
 
 /// Calculate chunk origin (bottom left corner of chunk) in tile coordinates

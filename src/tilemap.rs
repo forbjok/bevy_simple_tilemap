@@ -20,7 +20,7 @@ const TILES_PER_CHUNK: usize = (CHUNK_WIDTH * CHUNK_HEIGHT) as usize;
 
 #[derive(Debug, Default)]
 pub struct Chunk {
-    pub origin: IVec2,
+    pub origin: IVec3,
     pub tiles: Vec<Option<Tile>>,
     pub needs_remesh: bool,
 }
@@ -33,17 +33,17 @@ pub struct Tile {
 
 #[derive(Default)]
 pub struct TileMap {
-    pub tile_changes: Vec<(IVec2, Option<Tile>)>,
-    pub chunks: HashMap<IVec2, Entity>,
+    pub tile_changes: Vec<(IVec3, Option<Tile>)>,
+    pub chunks: HashMap<IVec3, Entity>,
 }
 
 #[derive(Default)]
 pub struct TileMapCache {
-    pub tile_changes_by_chunk: HashMap<IVec2, Vec<(IVec2, Option<Tile>)>>,
+    pub tile_changes_by_chunk: HashMap<IVec3, Vec<(IVec3, Option<Tile>)>>,
 }
 
 impl Chunk {
-    pub fn new(origin: IVec2) -> Self {
+    pub fn new(origin: IVec3) -> Self {
         Self {
             origin,
             tiles: vec![None; (CHUNK_WIDTH * CHUNK_HEIGHT) as usize],
@@ -53,20 +53,24 @@ impl Chunk {
 }
 
 impl TileMap {
-    pub fn set_tiles(&mut self, tiles: impl IntoIterator<Item = (IVec2, Option<Tile>)>) {
+    pub fn set_tiles(&mut self, tiles: impl IntoIterator<Item = (IVec3, Option<Tile>)>) {
         self.tile_changes
             .extend(tiles.into_iter().map(|(pos, tile)| (pos, tile)));
     }
 }
 
 /// Calculate chunk position based on tile position
-fn calc_chunk_pos(tile_pos: IVec2) -> IVec2 {
-    IVec2::new(tile_pos.x / CHUNK_WIDTH_I32, tile_pos.y / CHUNK_HEIGHT_I32)
+fn calc_chunk_pos(tile_pos: IVec3) -> IVec3 {
+    IVec3::new(tile_pos.x / CHUNK_WIDTH_I32, tile_pos.y / CHUNK_HEIGHT_I32, tile_pos.z)
 }
 
 /// Calculate chunk origin (bottom left corner of chunk) in tile coordinates
-fn calc_chunk_origin(chunk_pos: IVec2) -> IVec2 {
-    IVec2::new(chunk_pos.x * CHUNK_WIDTH_I32, chunk_pos.y * CHUNK_HEIGHT_I32)
+fn calc_chunk_origin(chunk_pos: IVec3) -> IVec3 {
+    IVec3::new(
+        chunk_pos.x * CHUNK_WIDTH_I32,
+        chunk_pos.y * CHUNK_HEIGHT_I32,
+        chunk_pos.z,
+    )
 }
 
 /// Calculate row major index of tile position
@@ -110,7 +114,7 @@ pub(crate) fn update_chunk_system(
 
                     for (pos, tile) in tiles.drain(..) {
                         let pos = pos - chunk_origin;
-                        let index = row_major_index(pos);
+                        let index = row_major_index(pos.into());
 
                         chunk.tiles[index] = tile;
                     }
@@ -127,7 +131,7 @@ pub(crate) fn update_chunk_system(
 
                 for (pos, tile) in tiles.drain(..) {
                     let pos = pos - chunk_origin;
-                    let index = row_major_index(pos);
+                    let index = row_major_index(pos.into());
 
                     chunk.tiles[index] = tile;
                 }
@@ -197,7 +201,7 @@ pub(crate) fn update_chunk_mesh_system(
             .filter_map(|(i, t)| t.as_ref().map(|t| (i, t)))
         {
             // Calculate position in chunk based on tile index
-            let pos = origin + row_major_pos(i);
+            let pos = origin + row_major_pos(i).extend(0);
 
             // Convert position to f32
             let pos = pos.as_f32();

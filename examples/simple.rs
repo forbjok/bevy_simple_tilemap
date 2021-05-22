@@ -38,7 +38,7 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<u32>) {
 
     for mut tilemap in query.iter_mut() {
         // List to store set tile operations
-        let mut tiles: Vec<(IVec2, Option<Tile>)> = Vec::with_capacity((WIDTH * HEIGHT) as usize);
+        let mut tiles: Vec<(IVec3, Option<Tile>)> = Vec::with_capacity((WIDTH * HEIGHT) as usize);
 
         let mut i = *count % 4;
 
@@ -48,7 +48,7 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<u32>) {
             for x in 0..WIDTH {
                 // Add tile change to list
                 tiles.push((
-                    IVec2::new(x, y),
+                    IVec3::new(x, y, 0),
                     Some(Tile {
                         sprite_index,
                         color: Color::WHITE,

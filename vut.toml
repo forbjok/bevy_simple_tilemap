@@ -1,0 +1,11 @@
+[general]
+ignore = "**/.git"
+
+[authoritative-version-source]
+type = "cargo"
+
+[[update-version-sources]]
+globs = "**"
+
+[[templates]]
+globs = "**/*.vutemplate"

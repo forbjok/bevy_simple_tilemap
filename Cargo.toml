@@ -15,3 +15,7 @@ bevy = "0.5.0"
 [[example]]
 name = "benchmark"
 path = "examples/benchmark.rs"
+
+[[example]]
+name = "simple"
+path = "examples/simple.rs"

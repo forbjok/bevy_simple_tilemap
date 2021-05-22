@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{ops::Range, time::Instant};
 
 use bevy::prelude::*;
 
@@ -32,6 +32,9 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<u32>) {
     const WIDTH: i32 = 1024;
     const HEIGHT: i32 = 1024;
 
+    const X_RANGE: Range<i32> = -(WIDTH / 2)..(WIDTH / 2);
+    const Y_RANGE: Range<i32> = -(HEIGHT / 2)..(HEIGHT / 2);
+
     *count += 1;
 
     let upd_tiles = Instant::now();
@@ -42,10 +45,10 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<u32>) {
 
         let mut i = *count % 4;
 
-        for y in 0..HEIGHT {
+        for y in Y_RANGE {
             let sprite_index = i % 4;
 
-            for x in 0..WIDTH {
+            for x in X_RANGE {
                 // Add tile change to list
                 tiles.push((
                     IVec3::new(x, y, 0),

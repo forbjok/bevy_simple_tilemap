@@ -17,5 +17,9 @@ name = "benchmark"
 path = "examples/benchmark.rs"
 
 [[example]]
+name = "multilayer"
+path = "examples/multilayer.rs"
+
+[[example]]
 name = "simple"
 path = "examples/simple.rs"

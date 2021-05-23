@@ -91,7 +91,7 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atl
         ),
     ];
 
-    let mut tilemap = TileMap::default();
+    let mut tilemap = TileMap::new();
     tilemap.set_tiles(tiles);
 
     // Set up tilemap

@@ -21,7 +21,7 @@ pub struct TileMapBundle {
 impl Default for TileMapBundle {
     fn default() -> Self {
         Self {
-            tilemap: Default::default(),
+            tilemap: TileMap::new(),
             tilemap_cache: Default::default(),
             visible: Visible {
                 is_transparent: true,

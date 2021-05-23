@@ -118,6 +118,10 @@ pub(crate) fn update_chunk_system(
 
         // Apply tile changes for each chunk
         for (chunk_pos, tiles) in changes_by_chunk.iter_mut() {
+            if tiles.is_empty() {
+                continue;
+            }
+
             if let Some(chunk_entity) = tilemap.chunks.get(&chunk_pos) {
                 // Chunk already exists...
                 if let Ok(mut chunk) = chunk_query.get_mut(*chunk_entity) {

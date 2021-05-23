@@ -33,8 +33,8 @@ pub struct Tile {
 
 #[derive(Default)]
 pub struct TileMap {
-    tile_changes: Vec<(IVec3, Option<Tile>)>,
     chunks: HashMap<IVec3, Entity>,
+    tile_changes: Vec<(IVec3, Option<Tile>)>,
 }
 
 #[derive(Default)]
@@ -93,6 +93,7 @@ pub(crate) fn update_chunk_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut tilemap_query: Query<(Entity, &mut TileMap, &mut TileMapCache, &Handle<TextureAtlas>)>,
     mut chunk_query: Query<&mut Chunk>,
+    texture_atlases: Res<Assets<TextureAtlas>>,
 ) {
     //let update_chunk_time = Instant::now();
 
@@ -146,6 +147,15 @@ pub(crate) fn update_chunk_system(
                 let mesh = Mesh::new(PrimitiveTopology::TriangleList);
                 let mesh = meshes.add(mesh);
 
+                // Determine tile size in pixels from first sprite in TextureAtlas.
+                // It is assumed and mandated that all sprites in the sprite sheet are the same size.
+                let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
+                let tile0_tex = texture_atlas.textures.get(0).unwrap();
+                let tile_size = Vec2::new(tile0_tex.width(), tile0_tex.height());
+
+                // Calculate chunk translation
+                let chunk_translation = (chunk_origin.truncate().as_f32() * tile_size).extend(chunk_origin.z as f32);
+
                 // Spawn chunk entity
                 let chunk_entity = commands
                     .spawn()
@@ -153,7 +163,7 @@ pub(crate) fn update_chunk_system(
                         chunk,
                         texture_atlas: texture_atlas_handle.clone(),
                         mesh,
-                        transform: Transform::from_translation(Vec3::new(0.0, 0.0, chunk_origin.z as f32)),
+                        transform: Transform::from_translation(chunk_translation),
                         ..Default::default()
                     })
                     .id();
@@ -190,7 +200,6 @@ pub(crate) fn update_chunk_mesh_system(
             return;
         }
 
-        let origin = chunk.origin;
         let tile_count = chunk.tiles.len();
 
         let mut positions: Vec<[f32; 2]> = Vec::with_capacity(VERTICES_PER_TILE * tile_count);
@@ -206,10 +215,7 @@ pub(crate) fn update_chunk_mesh_system(
             .filter_map(|(i, t)| t.as_ref().map(|t| (i, t)))
         {
             // Calculate position in chunk based on tile index
-            let pos = origin + row_major_pos(i).extend(0);
-
-            // Convert position to f32
-            let pos = pos.as_f32();
+            let pos = row_major_pos(i).as_f32();
 
             positions.extend(
                 [

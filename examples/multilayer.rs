@@ -1,6 +1,10 @@
 use std::time::Instant;
 
-use bevy::{core::FixedTimestep, prelude::*};
+use bevy::{
+    core::FixedTimestep,
+    prelude::*,
+    render::camera::{ActiveCameras, Camera},
+};
 
 use bevy_simple_tilemap::prelude::*;
 
@@ -9,8 +13,37 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(SimpleTileMapPlugin)
         .add_system(update_tiles_system.system().with_run_criteria(FixedTimestep::step(0.5)))
+        .add_system(input_system.system())
         .add_startup_system(setup.system())
         .run();
+}
+
+fn input_system(
+    active_cameras: Res<ActiveCameras>,
+    mut camera_transform_query: Query<(&mut Transform,), With<Camera>>,
+    keyboard_input: Res<Input<KeyCode>>,
+    time: Res<Time>,
+) {
+    const MOVE_SPEED: f32 = 1000.0;
+    const ZOOM_SPEED: f32 = 10.0;
+
+    if let Some(active_camera_entity) = active_cameras.get("Camera2d").and_then(|ac| ac.entity) {
+        if let Ok((mut tf,)) = camera_transform_query.get_mut(active_camera_entity) {
+            if keyboard_input.pressed(KeyCode::X) {
+                tf.scale -= Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
+            } else if keyboard_input.pressed(KeyCode::Z) {
+                tf.scale += Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
+            } else if keyboard_input.pressed(KeyCode::A) {
+                tf.translation.x -= MOVE_SPEED * time.delta_seconds();
+            } else if keyboard_input.pressed(KeyCode::D) {
+                tf.translation.x += MOVE_SPEED * time.delta_seconds();
+            } else if keyboard_input.pressed(KeyCode::S) {
+                tf.translation.y -= MOVE_SPEED * time.delta_seconds();
+            } else if keyboard_input.pressed(KeyCode::W) {
+                tf.translation.y += MOVE_SPEED * time.delta_seconds();
+            }
+        }
+    }
 }
 
 /// Draw line of foreground (layer 1) tiles, moving it up by one each time

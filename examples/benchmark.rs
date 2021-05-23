@@ -1,6 +1,9 @@
 use std::{ops::Range, time::Instant};
 
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    render::camera::{ActiveCameras, Camera},
+};
 
 use bevy_simple_tilemap::prelude::*;
 
@@ -15,15 +18,29 @@ fn main() {
 }
 
 fn input_system(
+    active_cameras: Res<ActiveCameras>,
+    mut camera_transform_query: Query<(&mut Transform,), With<Camera>>,
     keyboard_input: Res<Input<KeyCode>>,
-    mut tilemap_query: Query<&mut Transform, With<TileMap>>,
     time: Res<Time>,
 ) {
-    for mut tf in tilemap_query.iter_mut() {
-        if keyboard_input.pressed(KeyCode::X) {
-            tf.scale += Vec3::splat(0.5) * time.delta_seconds();
-        } else if keyboard_input.pressed(KeyCode::Z) {
-            tf.scale -= Vec3::splat(0.5) * time.delta_seconds();
+    const MOVE_SPEED: f32 = 1000.0;
+    const ZOOM_SPEED: f32 = 10.0;
+
+    if let Some(active_camera_entity) = active_cameras.get("Camera2d").and_then(|ac| ac.entity) {
+        if let Ok((mut tf,)) = camera_transform_query.get_mut(active_camera_entity) {
+            if keyboard_input.pressed(KeyCode::X) {
+                tf.scale -= Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
+            } else if keyboard_input.pressed(KeyCode::Z) {
+                tf.scale += Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
+            } else if keyboard_input.pressed(KeyCode::A) {
+                tf.translation.x -= MOVE_SPEED * time.delta_seconds();
+            } else if keyboard_input.pressed(KeyCode::D) {
+                tf.translation.x += MOVE_SPEED * time.delta_seconds();
+            } else if keyboard_input.pressed(KeyCode::S) {
+                tf.translation.y -= MOVE_SPEED * time.delta_seconds();
+            } else if keyboard_input.pressed(KeyCode::W) {
+                tf.translation.y += MOVE_SPEED * time.delta_seconds();
+            }
         }
     }
 }

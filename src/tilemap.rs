@@ -2,7 +2,12 @@ use std::sync::Mutex;
 
 use bevy::{
     prelude::*,
-    render::{mesh::Indices, pipeline::PrimitiveTopology},
+    render::{
+        camera::{ActiveCameras, Camera},
+        draw::OutsideFrustum,
+        mesh::Indices,
+        pipeline::PrimitiveTopology,
+    },
     tasks::AsyncComputeTaskPool,
     utils::HashMap,
 };
@@ -23,6 +28,7 @@ pub struct Chunk {
     origin: IVec3,
     tiles: Vec<Option<Tile>>,
     needs_remesh: bool,
+    size_in_pixels: Vec2,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -133,6 +139,7 @@ pub(crate) fn update_chunk_system(
                 let chunk_origin = calc_chunk_origin(*chunk_pos);
 
                 let mut chunk = Chunk::new(chunk_origin);
+                chunk.needs_remesh = true;
 
                 for (pos, tile) in tiles.drain(..) {
                     let pos = pos - chunk_origin;
@@ -141,20 +148,20 @@ pub(crate) fn update_chunk_system(
                     chunk.tiles[index] = tile;
                 }
 
-                chunk.needs_remesh = true;
-
-                // Create new mesh for chunk
-                let mesh = Mesh::new(PrimitiveTopology::TriangleList);
-                let mesh = meshes.add(mesh);
-
                 // Determine tile size in pixels from first sprite in TextureAtlas.
                 // It is assumed and mandated that all sprites in the sprite sheet are the same size.
                 let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
                 let tile0_tex = texture_atlas.textures.get(0).unwrap();
                 let tile_size = Vec2::new(tile0_tex.width(), tile0_tex.height());
 
+                chunk.size_in_pixels = Vec2::new(CHUNK_WIDTH as f32, CHUNK_HEIGHT as f32) * tile_size;
+
                 // Calculate chunk translation
                 let chunk_translation = (chunk_origin.truncate().as_f32() * tile_size).extend(chunk_origin.z as f32);
+
+                // Create new mesh for chunk
+                let mesh = Mesh::new(PrimitiveTopology::TriangleList);
+                let mesh = meshes.add(mesh);
 
                 // Spawn chunk entity
                 let chunk_entity = commands
@@ -184,7 +191,7 @@ pub(crate) fn update_chunk_system(
 
 /// Remesh changed chunks
 pub(crate) fn update_chunk_mesh_system(
-    mut chunk_query: Query<(&mut Chunk, &Handle<Mesh>)>,
+    mut chunk_query: Query<(&mut Chunk, &Handle<Mesh>), Without<OutsideFrustum>>,
     meshes: ResMut<Assets<Mesh>>,
     task_pool: Res<AsyncComputeTaskPool>,
 ) {
@@ -260,4 +267,79 @@ pub(crate) fn update_chunk_mesh_system(
     });
 
     //dbg!(remesh_time.elapsed());
+}
+
+/// Perform frustum culling of chunks
+pub(crate) fn tilemap_frustum_culling_system(
+    mut commands: Commands,
+    windows: Res<Windows>,
+    active_cameras: Res<ActiveCameras>,
+    camera_transform_query: Query<&GlobalTransform, With<Camera>>,
+    chunk_outside_frustum_query: Query<&OutsideFrustum, With<Chunk>>,
+    chunk_query: Query<(Entity, &GlobalTransform, &Chunk)>,
+) {
+    enum Anchor {
+        BottomLeft,
+        Center,
+    }
+
+    struct Rect {
+        anchor: Anchor,
+        position: Vec2,
+        size: Vec2,
+    }
+
+    impl Rect {
+        #[inline]
+        pub fn is_intersecting(&self, other: Rect) -> bool {
+            self.get_center_position().distance(other.get_center_position()) < (self.get_radius() + other.get_radius())
+        }
+
+        #[inline]
+        pub fn get_center_position(&self) -> Vec2 {
+            match self.anchor {
+                Anchor::BottomLeft => self.position + (self.size / 2.0),
+                Anchor::Center => self.position,
+            }
+        }
+
+        #[inline]
+        pub fn get_radius(&self) -> f32 {
+            let half_size = self.size / Vec2::splat(2.0);
+            (half_size.x.powf(2.0) + half_size.y.powf(2.0)).sqrt()
+        }
+    }
+
+    let window = windows.get_primary().unwrap();
+    let window_size = Vec2::new(window.width(), window.height());
+
+    for active_camera_entity in active_cameras.iter().filter_map(|a| a.entity) {
+        if let Ok(camera_transform) = camera_transform_query.get(active_camera_entity) {
+            let camera_size = window_size * camera_transform.scale.truncate();
+
+            let camera_rect = Rect {
+                anchor: Anchor::Center,
+                position: camera_transform.translation.truncate(),
+                size: camera_size,
+            };
+
+            for (entity, chunk_transform, chunk) in chunk_query.iter() {
+                let size = chunk.size_in_pixels * chunk_transform.scale.truncate();
+
+                let chunk_rect = Rect {
+                    anchor: Anchor::BottomLeft,
+                    position: chunk_transform.translation.truncate(),
+                    size,
+                };
+
+                if camera_rect.is_intersecting(chunk_rect) {
+                    if chunk_outside_frustum_query.get(entity).is_ok() {
+                        commands.entity(entity).remove::<OutsideFrustum>();
+                    }
+                } else if chunk_outside_frustum_query.get(entity).is_err() {
+                    commands.entity(entity).insert(OutsideFrustum);
+                }
+            }
+        }
+    }
 }

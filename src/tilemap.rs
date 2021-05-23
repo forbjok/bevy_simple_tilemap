@@ -59,6 +59,10 @@ impl Chunk {
 }
 
 impl TileMap {
+    pub fn set_tile(&mut self, pos: IVec3, tile: Option<Tile>) {
+        self.tile_changes.push((pos, tile));
+    }
+
     pub fn set_tiles(&mut self, tiles: impl IntoIterator<Item = (IVec3, Option<Tile>)>) {
         self.tile_changes
             .extend(tiles.into_iter().map(|(pos, tile)| (pos, tile)));

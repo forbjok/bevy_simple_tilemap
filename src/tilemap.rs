@@ -318,7 +318,7 @@ pub(crate) fn tilemap_frustum_culling_system(
 
     impl Rect {
         #[inline]
-        pub fn is_intersecting(&self, other: Rect) -> bool {
+        pub fn is_intersecting(&self, other: &Rect) -> bool {
             self.get_center_position().distance(other.get_center_position()) < (self.get_radius() + other.get_radius())
         }
 
@@ -340,33 +340,41 @@ pub(crate) fn tilemap_frustum_culling_system(
     let window = windows.get_primary().unwrap();
     let window_size = Vec2::new(window.width(), window.height());
 
-    for active_camera_entity in active_cameras.iter().filter_map(|a| a.entity) {
-        if let Ok(camera_transform) = camera_transform_query.get(active_camera_entity) {
-            let camera_size = window_size * camera_transform.scale.truncate();
+    let camera_rects = {
+        let mut camera_rects: Vec<Rect> = Vec::with_capacity(3);
 
-            let camera_rect = Rect {
-                anchor: Anchor::Center,
-                position: camera_transform.translation.truncate(),
-                size: camera_size,
-            };
+        for active_camera_entity in active_cameras.iter().filter_map(|a| a.entity) {
+            if let Ok(camera_transform) = camera_transform_query.get(active_camera_entity) {
+                let camera_size = window_size * camera_transform.scale.truncate();
 
-            for (entity, chunk_transform, chunk) in chunk_query.iter() {
-                let size = chunk.size_in_pixels * chunk_transform.scale.truncate();
-
-                let chunk_rect = Rect {
-                    anchor: Anchor::BottomLeft,
-                    position: chunk_transform.translation.truncate(),
-                    size,
+                let camera_rect = Rect {
+                    anchor: Anchor::Center,
+                    position: camera_transform.translation.truncate(),
+                    size: camera_size,
                 };
 
-                if camera_rect.is_intersecting(chunk_rect) {
-                    if chunk_outside_frustum_query.get(entity).is_ok() {
-                        commands.entity(entity).remove::<OutsideFrustum>();
-                    }
-                } else if chunk_outside_frustum_query.get(entity).is_err() {
-                    commands.entity(entity).insert(OutsideFrustum);
-                }
+                camera_rects.push(camera_rect);
             }
+        }
+
+        camera_rects
+    };
+
+    for (entity, chunk_transform, chunk) in chunk_query.iter() {
+        let size = chunk.size_in_pixels * chunk_transform.scale.truncate();
+
+        let chunk_rect = Rect {
+            anchor: Anchor::BottomLeft,
+            position: chunk_transform.translation.truncate(),
+            size,
+        };
+
+        if camera_rects.iter().any(|cr| cr.is_intersecting(&chunk_rect)) {
+            if chunk_outside_frustum_query.get(entity).is_ok() {
+                commands.entity(entity).remove::<OutsideFrustum>();
+            }
+        } else if chunk_outside_frustum_query.get(entity).is_err() {
+            commands.entity(entity).insert(OutsideFrustum);
         }
     }
 }

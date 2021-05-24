@@ -98,7 +98,7 @@ fn row_major_pos(index: usize) -> IVec2 {
 }
 
 /// Update and mark chunks for remeshing, based on queued tile changes
-pub(crate) fn update_chunk_system(
+pub(crate) fn update_chunks_system(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut tilemap_query: Query<(Entity, &mut TileMap, &mut TileMapCache, &Handle<TextureAtlas>)>,
@@ -198,7 +198,7 @@ pub(crate) fn update_chunk_system(
 }
 
 /// Remesh changed chunks
-pub(crate) fn update_chunk_mesh_system(
+pub(crate) fn remesh_chunks_system(
     mut chunk_query: Query<(&mut Chunk, &Handle<Mesh>), Without<OutsideFrustum>>,
     meshes: ResMut<Assets<Mesh>>,
     task_pool: Res<AsyncComputeTaskPool>,

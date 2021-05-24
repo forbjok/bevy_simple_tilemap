@@ -24,14 +24,17 @@ impl Plugin for SimpleTileMapPlugin {
             SimpleTileMapStage::Remesh,
             SystemStage::parallel(),
         )
-        .add_system_to_stage(SimpleTileMapStage::Update, crate::tilemap::update_chunk_system.system())
+        .add_system_to_stage(
+            SimpleTileMapStage::Update,
+            crate::tilemap::update_chunks_system.system(),
+        )
         .add_system_to_stage(
             SimpleTileMapStage::Update,
             crate::tilemap::tilemap_frustum_culling_system.system(),
         )
         .add_system_to_stage(
             SimpleTileMapStage::Remesh,
-            crate::tilemap::update_chunk_mesh_system.system(),
+            crate::tilemap::remesh_chunks_system.system(),
         );
 
         let world = app.world_mut();

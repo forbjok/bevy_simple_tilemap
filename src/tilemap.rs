@@ -56,6 +56,17 @@ impl Chunk {
             ..Default::default()
         }
     }
+
+    fn set_tiles(&mut self, tiles: impl IntoIterator<Item = (IVec3, Option<Tile>)>) {
+        let chunk_origin = self.origin;
+
+        for (pos, tile) in tiles {
+            let pos = pos - chunk_origin;
+            let index = row_major_index(pos.into());
+
+            self.tiles[index] = tile;
+        }
+    }
 }
 
 impl TileMap {
@@ -129,14 +140,8 @@ pub(crate) fn update_chunks_system(
             if let Some(chunk_entity) = tilemap.chunks.get(&chunk_pos) {
                 // Chunk already exists...
                 if let Ok(mut chunk) = chunk_query.get_mut(*chunk_entity) {
-                    let chunk_origin = chunk.origin;
-
-                    for (pos, tile) in tiles.drain(..) {
-                        let pos = pos - chunk_origin;
-                        let index = row_major_index(pos.into());
-
-                        chunk.tiles[index] = tile;
-                    }
+                    // Set tiles in chunk
+                    chunk.set_tiles(tiles.drain(..));
 
                     // Mark chunk for remesh
                     chunk.needs_remesh = true;
@@ -149,12 +154,8 @@ pub(crate) fn update_chunks_system(
                 let mut chunk = Chunk::new(chunk_origin);
                 chunk.needs_remesh = true;
 
-                for (pos, tile) in tiles.drain(..) {
-                    let pos = pos - chunk_origin;
-                    let index = row_major_index(pos.into());
-
-                    chunk.tiles[index] = tile;
-                }
+                // Set tiles in chunk
+                chunk.set_tiles(tiles.drain(..));
 
                 // Determine tile size in pixels from first sprite in TextureAtlas.
                 // It is assumed and mandated that all sprites in the sprite sheet are the same size.

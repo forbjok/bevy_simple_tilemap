@@ -30,6 +30,10 @@ impl Plugin for SimpleTileMapPlugin {
         )
         .add_system_to_stage(
             SimpleTileMapStage::Update,
+            crate::tilemap::propagate_visibility_system.system(),
+        )
+        .add_system_to_stage(
+            SimpleTileMapStage::Update,
             crate::tilemap::tilemap_frustum_culling_system.system(),
         )
         .add_system_to_stage(

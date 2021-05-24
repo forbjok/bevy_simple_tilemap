@@ -199,7 +199,7 @@ pub(crate) fn update_chunks_system(
 
 /// Remesh changed chunks
 pub(crate) fn remesh_chunks_system(
-    mut chunk_query: Query<(&mut Chunk, &Handle<Mesh>), Without<OutsideFrustum>>,
+    mut chunk_query: Query<(&mut Chunk, &Handle<Mesh>, &Visible), Without<OutsideFrustum>>,
     meshes: ResMut<Assets<Mesh>>,
     task_pool: Res<AsyncComputeTaskPool>,
 ) {
@@ -210,8 +210,8 @@ pub(crate) fn remesh_chunks_system(
 
     //let remesh_time = Instant::now();
 
-    chunk_query.par_for_each_mut(&task_pool, 8, |(mut chunk, mesh_handle)| {
-        if !chunk.needs_remesh {
+    chunk_query.par_for_each_mut(&task_pool, 8, |(mut chunk, mesh_handle, visible)| {
+        if !chunk.needs_remesh || !visible.is_visible {
             return;
         }
 
@@ -275,6 +275,20 @@ pub(crate) fn remesh_chunks_system(
     });
 
     //dbg!(remesh_time.elapsed());
+}
+
+/// Propagate TileMap visibility to chunks
+pub(crate) fn propagate_visibility_system(
+    mut tilemap_query: Query<(&TileMap, &Visible), (Changed<Visible>, With<TileMap>)>,
+    mut chunk_query: Query<&mut Visible, (With<Chunk>, Without<TileMap>)>,
+) {
+    for (tilemap, tilemap_visible) in tilemap_query.iter_mut() {
+        for chunk_entity in tilemap.chunks.values() {
+            if let Ok(mut chunk_visible) = chunk_query.get_mut(*chunk_entity) {
+                chunk_visible.is_visible = tilemap_visible.is_visible;
+            }
+        }
+    }
 }
 
 /// Perform frustum culling of chunks

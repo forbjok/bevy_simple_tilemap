@@ -81,6 +81,7 @@ impl TileMap {
 }
 
 /// Calculate chunk position based on tile position
+#[inline]
 fn calc_chunk_pos(tile_pos: IVec3) -> IVec3 {
     IVec3::new(
         tile_pos.x.div_euclid(CHUNK_WIDTH_I32),
@@ -90,6 +91,7 @@ fn calc_chunk_pos(tile_pos: IVec3) -> IVec3 {
 }
 
 /// Calculate chunk origin (bottom left corner of chunk) in tile coordinates
+#[inline]
 fn calc_chunk_origin(chunk_pos: IVec3) -> IVec3 {
     IVec3::new(
         chunk_pos.x * CHUNK_WIDTH_I32,
@@ -99,11 +101,13 @@ fn calc_chunk_origin(chunk_pos: IVec3) -> IVec3 {
 }
 
 /// Calculate row major index of tile position
+#[inline]
 fn row_major_index(pos: IVec2) -> usize {
     ((pos.x * CHUNK_HEIGHT_I32) + pos.y) as usize
 }
 
 /// Calculate row major position from index
+#[inline]
 fn row_major_pos(index: usize) -> IVec2 {
     IVec2::new((index / CHUNK_WIDTH_USIZE) as i32, (index % CHUNK_HEIGHT_USIZE) as i32)
 }

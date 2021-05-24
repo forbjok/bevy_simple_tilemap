@@ -7,7 +7,7 @@ use bevy::{
 pub struct SimpleTileMapPlugin;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, StageLabel)]
-pub enum SimpleTileMapStage {
+enum SimpleTileMapStage {
     Update,
     Remesh,
 }

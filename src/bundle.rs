@@ -13,10 +13,7 @@ pub struct TileMapBundle {
     pub tilemap: TileMap,
     pub tilemap_cache: TileMapCache,
     pub texture_atlas: Handle<TextureAtlas>,
-    pub draw: Draw,
     pub visible: Visible,
-    pub render_pipelines: RenderPipelines,
-    pub main_pass: MainPass,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
 }
@@ -26,15 +23,10 @@ impl Default for TileMapBundle {
         Self {
             tilemap: Default::default(),
             tilemap_cache: Default::default(),
-            render_pipelines: RenderPipelines::from_pipelines(vec![RenderPipeline::new(
-                TILEMAP_PIPELINE_HANDLE.typed(),
-            )]),
             visible: Visible {
                 is_transparent: true,
                 ..Default::default()
             },
-            main_pass: MainPass,
-            draw: Default::default(),
             texture_atlas: Default::default(),
             transform: Default::default(),
             global_transform: Default::default(),

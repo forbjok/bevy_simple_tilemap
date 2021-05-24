@@ -16,10 +16,11 @@ use crate::bundle::ChunkBundle;
 
 #[derive(Debug, Default)]
 pub struct Chunk {
-    chunk_size: IVec2,
     origin: IVec3,
     tiles: Vec<Option<Tile>>,
     needs_remesh: bool,
+
+    chunk_size: IVec2,
     size_in_pixels: Vec2,
 }
 
@@ -49,6 +50,19 @@ impl Chunk {
             tiles: vec![None; (chunk_size.x * chunk_size.y) as usize],
             ..Default::default()
         }
+    }
+
+    /// Calculate row major index of tile position
+    fn row_major_index(&self, pos: IVec2) -> usize {
+        ((pos.x * self.chunk_size.x) + pos.y) as usize
+    }
+
+    /// Calculate row major position from index
+    fn row_major_pos(&self, index: usize) -> IVec2 {
+        IVec2::new(
+            (index / self.chunk_size.x as usize) as i32,
+            (index % self.chunk_size.y as usize) as i32,
+        )
     }
 }
 
@@ -83,19 +97,6 @@ fn calc_chunk_pos(tile_pos: IVec3, chunk_size: IVec2) -> IVec3 {
 /// Calculate chunk origin (bottom left corner of chunk) in tile coordinates
 fn calc_chunk_origin(chunk_pos: IVec3, chunk_size: IVec2) -> IVec3 {
     IVec3::new(chunk_pos.x * chunk_size.x, chunk_pos.y * chunk_size.y, chunk_pos.z)
-}
-
-/// Calculate row major index of tile position
-fn row_major_index(pos: IVec2, chunk_size: IVec2) -> usize {
-    ((pos.x * chunk_size.x) + pos.y) as usize
-}
-
-/// Calculate row major position from index
-fn row_major_pos(index: usize, chunk_size: IVec2) -> IVec2 {
-    IVec2::new(
-        (index / chunk_size.x as usize) as i32,
-        (index % chunk_size.y as usize) as i32,
-    )
 }
 
 /// Update and mark chunks for remeshing, based on queued tile changes
@@ -136,7 +137,7 @@ pub(crate) fn update_chunks_system(
 
                     for (pos, tile) in tiles.drain(..) {
                         let pos = pos - chunk_origin;
-                        let index = row_major_index(pos.into(), chunk_size);
+                        let index = chunk.row_major_index(pos.into());
 
                         chunk.tiles[index] = tile;
                     }
@@ -154,7 +155,7 @@ pub(crate) fn update_chunks_system(
 
                 for (pos, tile) in tiles.drain(..) {
                     let pos = pos - chunk_origin;
-                    let index = row_major_index(pos.into(), chunk_size);
+                    let index = chunk.row_major_index(pos.into());
 
                     chunk.tiles[index] = tile;
                 }
@@ -233,7 +234,7 @@ pub(crate) fn remesh_chunks_system(
             .filter_map(|(i, t)| t.as_ref().map(|t| (i, t)))
         {
             // Calculate position in chunk based on tile index
-            let pos = row_major_pos(i, chunk.chunk_size).as_f32();
+            let pos = chunk.row_major_pos(i).as_f32();
 
             positions.extend(
                 [

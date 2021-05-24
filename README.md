@@ -40,7 +40,12 @@ fn setup(
 }
 ```
 
-### Updating (or inserting) tiles:
+### Updating (or inserting) single tile:
+```rust
+tilemap.set_tile(IVec3::new(0, 0, 0), Some(Tile { sprite_index: 0, color: Color::WHITE }));
+```
+
+### Updating (or inserting) multiple tiles:
 ```rust
 // List to store set tile operations
 let mut tiles: Vec<(IVec3, Option<Tile>)> = Vec::new();

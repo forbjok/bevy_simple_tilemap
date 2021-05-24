@@ -21,6 +21,7 @@ fn main() {
 fn input_system(
     active_cameras: Res<ActiveCameras>,
     mut camera_transform_query: Query<(&mut Transform,), With<Camera>>,
+    mut tilemap_visible_query: Query<&mut Visible, With<TileMap>>,
     keyboard_input: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {
@@ -33,14 +34,24 @@ fn input_system(
                 tf.scale -= Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
             } else if keyboard_input.pressed(KeyCode::Z) {
                 tf.scale += Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
-            } else if keyboard_input.pressed(KeyCode::A) {
+            }
+
+            if keyboard_input.pressed(KeyCode::A) {
                 tf.translation.x -= MOVE_SPEED * time.delta_seconds();
             } else if keyboard_input.pressed(KeyCode::D) {
                 tf.translation.x += MOVE_SPEED * time.delta_seconds();
-            } else if keyboard_input.pressed(KeyCode::S) {
+            }
+
+            if keyboard_input.pressed(KeyCode::S) {
                 tf.translation.y -= MOVE_SPEED * time.delta_seconds();
             } else if keyboard_input.pressed(KeyCode::W) {
                 tf.translation.y += MOVE_SPEED * time.delta_seconds();
+            }
+
+            if keyboard_input.just_pressed(KeyCode::V) {
+                // Toggle visibility
+                let mut visible = tilemap_visible_query.iter_mut().next().unwrap();
+                visible.is_visible = !visible.is_visible;
             }
         }
     }

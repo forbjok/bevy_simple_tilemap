@@ -1,6 +1,7 @@
 use bevy::asset::{Assets, HandleUntyped};
 use bevy::reflect::TypeUuid;
 use bevy::render::render_graph::AssetRenderResourcesNode;
+use bevy::render::pipeline::BlendComponent;
 use bevy::render::{
     pipeline::{
         BlendFactor, BlendOperation, BlendState, ColorTargetState, ColorWrite, CompareFunction, DepthBiasState,

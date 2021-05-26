@@ -19,7 +19,6 @@ const CHUNK_HEIGHT: u32 = 64;
 const CHUNK_WIDTH_I32: i32 = CHUNK_WIDTH as i32;
 const CHUNK_HEIGHT_I32: i32 = CHUNK_HEIGHT as i32;
 const CHUNK_WIDTH_USIZE: usize = CHUNK_WIDTH as usize;
-const CHUNK_HEIGHT_USIZE: usize = CHUNK_HEIGHT as usize;
 
 const TILES_PER_CHUNK: usize = (CHUNK_WIDTH * CHUNK_HEIGHT) as usize;
 
@@ -118,13 +117,15 @@ fn calc_chunk_origin(chunk_pos: IVec3) -> IVec3 {
 /// Calculate row major index of tile position
 #[inline]
 fn row_major_index(pos: IVec2) -> usize {
-    ((pos.x * CHUNK_HEIGHT_I32) + pos.y) as usize
+    (pos.x + pos.y * CHUNK_HEIGHT_I32) as usize
 }
 
 /// Calculate row major position from index
 #[inline]
 fn row_major_pos(index: usize) -> IVec2 {
-    IVec2::new((index / CHUNK_WIDTH_USIZE) as i32, (index % CHUNK_HEIGHT_USIZE) as i32)
+    let y = index / CHUNK_WIDTH_USIZE;
+
+    IVec2::new((index - (y * CHUNK_WIDTH_USIZE as usize)) as i32, y as i32)
 }
 
 /// Update and mark chunks for remeshing, based on queued tile changes

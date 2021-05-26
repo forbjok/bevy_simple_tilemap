@@ -1,10 +1,11 @@
 use bevy::asset::{Assets, HandleUntyped};
 use bevy::reflect::TypeUuid;
+use bevy::render::pipeline::BlendComponent;
 use bevy::render::{
     pipeline::{
-        BlendFactor, BlendOperation, BlendState, ColorTargetState, ColorWrite, CompareFunction, CullMode,
-        DepthBiasState, DepthStencilState, FrontFace, PipelineDescriptor, PolygonMode, PrimitiveState,
-        PrimitiveTopology, StencilFaceState, StencilState,
+        BlendFactor, BlendOperation, BlendState, ColorTargetState, ColorWrite, CompareFunction, DepthBiasState,
+        DepthStencilState, FrontFace, PipelineDescriptor, PolygonMode, PrimitiveState, PrimitiveTopology,
+        StencilFaceState, StencilState,
     },
     render_graph::RenderGraph,
     shader::{Shader, ShaderStage, ShaderStages},
@@ -31,28 +32,31 @@ pub fn build_tilemap_pipeline(shaders: &mut Assets<Shader>) -> PipelineDescripto
                 slope_scale: 0.0,
                 clamp: 0.0,
             },
-            clamp_depth: false,
         }),
         color_target_states: vec![ColorTargetState {
             format: TextureFormat::default(),
-            color_blend: BlendState {
-                src_factor: BlendFactor::SrcAlpha,
-                dst_factor: BlendFactor::OneMinusSrcAlpha,
-                operation: BlendOperation::Add,
-            },
-            alpha_blend: BlendState {
-                src_factor: BlendFactor::One,
-                dst_factor: BlendFactor::One,
-                operation: BlendOperation::Add,
-            },
+            blend: Some(BlendState {
+                color: BlendComponent {
+                    src_factor: BlendFactor::SrcAlpha,
+                    dst_factor: BlendFactor::OneMinusSrcAlpha,
+                    operation: BlendOperation::Add,
+                },
+                alpha: BlendComponent {
+                    src_factor: BlendFactor::One,
+                    dst_factor: BlendFactor::One,
+                    operation: BlendOperation::Add,
+                },
+            }),
             write_mask: ColorWrite::ALL,
         }],
         primitive: PrimitiveState {
             topology: PrimitiveTopology::TriangleList,
             strip_index_format: None,
             front_face: FrontFace::Ccw,
-            cull_mode: CullMode::None,
+            cull_mode: None,
             polygon_mode: PolygonMode::Fill,
+            clamp_depth: false,
+            conservative: false,
         },
         ..PipelineDescriptor::new(ShaderStages {
             vertex: shaders.add(Shader::from_glsl(ShaderStage::Vertex, include_str!("tilemap.vert"))),

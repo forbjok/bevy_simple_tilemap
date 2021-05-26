@@ -41,6 +41,7 @@ pub struct Tile {
 pub struct TileMap {
     chunks: HashMap<IVec3, Entity>,
     tile_changes: Vec<(IVec3, Option<Tile>)>,
+    clear_requested: bool,
 }
 
 #[derive(Default)]
@@ -57,6 +58,12 @@ impl Chunk {
         }
     }
 
+    fn clear(&mut self) {
+        for tile in self.tiles.iter_mut() {
+            *tile = None;
+        }
+    }
+
     fn set_tiles(&mut self, tiles: impl IntoIterator<Item = (IVec3, Option<Tile>)>) {
         let chunk_origin = self.origin;
 
@@ -70,6 +77,14 @@ impl Chunk {
 }
 
 impl TileMap {
+    pub fn clear(&mut self) {
+        // Clear change queue
+        self.tile_changes.clear();
+
+        // Request clear
+        self.clear_requested = true;
+    }
+
     pub fn set_tile(&mut self, pos: IVec3, tile: Option<Tile>) {
         self.tile_changes.push((pos, tile));
     }
@@ -125,6 +140,15 @@ pub(crate) fn update_chunks_system(
     for (tilemap_entity, mut tilemap, mut tilemap_cache, texture_atlas_handle) in tilemap_query.iter_mut() {
         // Temporary storage for tile changes grouped by chunk
         let changes_by_chunk = &mut tilemap_cache.tile_changes_by_chunk;
+
+        // A clear was requested. Clear all chunks.
+        if tilemap.clear_requested {
+            for chunk_entity in tilemap.chunks.values() {
+                if let Ok(mut chunk) = chunk_query.get_mut(*chunk_entity) {
+                    chunk.clear();
+                }
+            }
+        }
 
         for (pos, tile) in tilemap.tile_changes.drain(..) {
             let chunk_pos = calc_chunk_pos(pos);

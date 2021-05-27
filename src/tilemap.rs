@@ -9,7 +9,7 @@ use bevy::{
         pipeline::PrimitiveTopology,
     },
     tasks::AsyncComputeTaskPool,
-    utils::HashMap,
+    utils::{HashMap, HashSet},
 };
 
 use crate::bundle::ChunkBundle;
@@ -40,7 +40,8 @@ pub struct Tile {
 pub struct TileMap {
     chunks: HashMap<IVec3, Entity>,
     tile_changes: Vec<(IVec3, Option<Tile>)>,
-    clear_requested: bool,
+    clear_all: bool,
+    clear_layers: HashSet<i32>,
 }
 
 #[derive(Default)]
@@ -80,8 +81,19 @@ impl TileMap {
         // Clear change queue
         self.tile_changes.clear();
 
-        // Request clear
-        self.clear_requested = true;
+        // Clear layer clear requests, since we're clearing everything anyway
+        self.clear_layers.clear();
+
+        // Request full clear
+        self.clear_all = true;
+    }
+
+    pub fn clear_layer(&mut self, layer: i32) {
+        // Remove queued tile changes for the cleared layer
+        self.tile_changes.retain(|(pos, _)| pos.z != layer);
+
+        // Request clear layer
+        self.clear_layers.insert(layer);
     }
 
     pub fn set_tile(&mut self, pos: IVec3, tile: Option<Tile>) {
@@ -142,11 +154,24 @@ pub(crate) fn update_chunks_system(
         // Temporary storage for tile changes grouped by chunk
         let changes_by_chunk = &mut tilemap_cache.tile_changes_by_chunk;
 
-        // A clear was requested. Clear all chunks.
-        if tilemap.clear_requested {
+        // A full clear was requested. Clear all chunks.
+        if tilemap.clear_all {
             for chunk_entity in tilemap.chunks.values() {
                 if let Ok(mut chunk) = chunk_query.get_mut(*chunk_entity) {
                     chunk.clear();
+                }
+            }
+        }
+
+        if !tilemap.clear_layers.is_empty() {
+            let clear_layers: Vec<i32> = tilemap.clear_layers.drain().collect();
+
+            // Process clear layer requests
+            for layer in clear_layers.into_iter() {
+                for (_, chunk_entity) in tilemap.chunks.iter().filter(|(pos, _)| pos.z == layer) {
+                    if let Ok(mut chunk) = chunk_query.get_mut(*chunk_entity) {
+                        chunk.clear();
+                    }
                 }
             }
         }

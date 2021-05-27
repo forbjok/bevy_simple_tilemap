@@ -64,25 +64,20 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<i32>) {
     let line_y = *count % 10;
 
     for mut tilemap in query.iter_mut() {
+        tilemap.clear_layer(1);
+
         // List to store set tile operations
         let mut tiles = Vec::new();
 
-        for y in 0..10 {
-            let tile = if y == line_y {
-                // Set to wall tile if line is current
+        for x in 0..10 {
+            // Add tile change
+            tiles.push((
+                IVec3::new(x, line_y, 1),
                 Some(Tile {
                     sprite_index: 0,
                     ..Default::default()
-                })
-            } else {
-                // Remove tile if this line is not the current
-                None
-            };
-
-            for x in 0..10 {
-                // Add tile change
-                tiles.push((IVec3::new(x, y, 1), tile.clone()));
-            }
+                }),
+            ));
         }
 
         // Perform tile update

@@ -62,6 +62,8 @@ impl Chunk {
         for tile in self.tiles.iter_mut() {
             *tile = None;
         }
+
+        self.needs_remesh = true;
     }
 
     fn set_tiles(&mut self, tiles: impl IntoIterator<Item = (IVec3, Option<Tile>)>) {

@@ -3,6 +3,7 @@
 layout(location = 0) in vec2 Vertex_Position;
 layout(location = 1) in uint SpriteIndex;
 layout(location = 2) in vec4 SpriteColor;
+layout(location = 3) in uint TileFlags;
 
 layout(location = 0) out vec2 v_Uv;
 layout(location = 1) out vec4 v_Color;
@@ -28,6 +29,9 @@ layout(set = 2, binding = 0) uniform Transform {
     mat4 SpriteTransform;
 };
 
+const uint FLIP_X = 1 << 0;
+const uint FLIP_Y = 1 << 1;
+
 void main() {
     Rect sprite_rect = Textures[SpriteIndex];
 
@@ -39,6 +43,28 @@ void main() {
     vec2 top_left = sprite_rect.begin;
     vec2 top_right = vec2(sprite_rect.end.x, sprite_rect.begin.y);
     vec2 bottom_right = sprite_rect.end;
+
+    vec2 tmp;
+
+    // If FLIP_X flag is set
+    if ((TileFlags & FLIP_X) == FLIP_X) {
+      tmp = bottom_left;
+      bottom_left = bottom_right;
+      bottom_right = tmp;
+      tmp = top_left;
+      top_left = top_right;
+      top_right = tmp;
+    }
+
+    // If FLIP_Y flag is set
+    if ((TileFlags & FLIP_Y) == FLIP_Y) {
+      tmp = bottom_left;
+      bottom_left = top_left;
+      top_left = tmp;
+      tmp = bottom_right;
+      bottom_right = top_right;
+      top_right = tmp;
+    }
 
     vec2 atlas_positions[4] = vec2[](
         bottom_left,

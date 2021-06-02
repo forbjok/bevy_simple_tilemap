@@ -4,4 +4,4 @@ pub mod prelude;
 mod render;
 mod tilemap;
 
-pub use self::tilemap::{Tile, TileMap};
+pub use self::tilemap::{Tile, TileFlags, TileMap};

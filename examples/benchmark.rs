@@ -82,7 +82,7 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<u32>) {
                     IVec3::new(x, y, 0),
                     Some(Tile {
                         sprite_index,
-                        color: Color::WHITE,
+                        ..Default::default()
                     }),
                 ));
             }

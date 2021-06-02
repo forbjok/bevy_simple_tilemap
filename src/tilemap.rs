@@ -1,3 +1,4 @@
+use bitflags::bitflags;
 use std::sync::Mutex;
 
 use bevy::{
@@ -30,10 +31,19 @@ pub struct Chunk {
     size_in_pixels: Vec2,
 }
 
+bitflags! {
+    #[derive(Default)]
+    pub struct TileFlags: u32 {
+        const FLIP_X = 1 << 0;
+        const FLIP_Y = 1 << 1;
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Tile {
     pub sprite_index: u32,
     pub color: Color,
+    pub flags: TileFlags,
 }
 
 #[derive(Default)]
@@ -277,6 +287,7 @@ pub(crate) fn remesh_chunks_system(
         let mut positions: Vec<[f32; 2]> = Vec::with_capacity(VERTICES_PER_TILE * tile_count);
         let mut sprite_indexes: Vec<u32> = Vec::with_capacity(VERTICES_PER_TILE * tile_count);
         let mut sprite_colors: Vec<[f32; 4]> = Vec::with_capacity(VERTICES_PER_TILE * tile_count);
+        let mut tile_flags: Vec<u32> = Vec::with_capacity(VERTICES_PER_TILE * tile_count);
         let mut indices: Vec<u32> = Vec::with_capacity(INDICES_PER_TILE * tile_count);
         let mut index: u32 = 0;
 
@@ -312,6 +323,9 @@ pub(crate) fn remesh_chunks_system(
             let tile_color: [f32; 4] = tile.color.into();
             sprite_colors.extend([tile_color, tile_color, tile_color, tile_color].iter());
 
+            let tf_bits = tile.flags.bits();
+            tile_flags.extend([tf_bits, tf_bits, tf_bits, tf_bits].iter());
+
             indices.extend([index, index + 2, index + 1, index, index + 3, index + 2].iter());
 
             index += 4;
@@ -321,6 +335,7 @@ pub(crate) fn remesh_chunks_system(
         new_mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
         new_mesh.set_attribute("SpriteIndex", sprite_indexes);
         new_mesh.set_attribute("SpriteColor", sprite_colors);
+        new_mesh.set_attribute("TileFlags", tile_flags);
         new_mesh.set_indices(Some(Indices::U32(indices)));
 
         let mut meshes = meshes.lock().unwrap();

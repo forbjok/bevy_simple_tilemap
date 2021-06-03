@@ -356,6 +356,12 @@ pub(crate) fn remesh_chunks_system(
                 index += 4;
             }
 
+            // If there are no tiles to render, add a default TileGpuData.
+            // Workaround for "Size of the buffer needs to be greater than 0!" error.
+            if tiles.is_empty() {
+                tiles.push(Default::default());
+            }
+
             let mut chunk_gpu_datas = chunk_gpu_datas.lock().unwrap();
             if let Some(chunk_gpu_data) = chunk_gpu_datas.get_mut(chunk_gpu_data_handle) {
                 *chunk_gpu_data = ChunkGpuData { tiles };

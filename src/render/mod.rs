@@ -1,6 +1,6 @@
 use bevy::asset::{Assets, HandleUntyped};
 use bevy::reflect::TypeUuid;
-use bevy::render::pipeline::BlendComponent;
+use bevy::render::render_graph::AssetRenderResourcesNode;
 use bevy::render::{
     pipeline::{
         BlendFactor, BlendOperation, BlendState, ColorTargetState, ColorWrite, CompareFunction, DepthBiasState,
@@ -11,6 +11,8 @@ use bevy::render::{
     shader::{Shader, ShaderStage, ShaderStages},
     texture::TextureFormat,
 };
+
+use crate::tilemap::ChunkGpuData;
 
 pub const TILEMAP_PIPELINE_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(PipelineDescriptor::TYPE_UUID, 9765236402292098257);
@@ -65,10 +67,19 @@ pub fn build_tilemap_pipeline(shaders: &mut Assets<Shader>) -> PipelineDescripto
     }
 }
 
+pub mod node {
+    pub const TILEMAP_CHUNK_GPU_DATA: &str = "tilemap_chunk_gpu_data";
+}
+
 pub(crate) fn add_tilemap_graph(
-    _graph: &mut RenderGraph,
+    graph: &mut RenderGraph,
     pipelines: &mut Assets<PipelineDescriptor>,
     shaders: &mut Assets<Shader>,
 ) {
+    graph.add_system_node(
+        node::TILEMAP_CHUNK_GPU_DATA,
+        AssetRenderResourcesNode::<ChunkGpuData>::new(false),
+    );
+
     pipelines.set_untracked(TILEMAP_PIPELINE_HANDLE, build_tilemap_pipeline(shaders));
 }

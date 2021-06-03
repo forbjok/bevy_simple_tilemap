@@ -5,7 +5,7 @@ use bevy::{
 
 use crate::{
     render::TILEMAP_PIPELINE_HANDLE,
-    tilemap::{Chunk, TileMap, TileMapCache},
+    tilemap::{Chunk, ChunkGpuData, TileMap, TileMapCache},
 };
 
 #[derive(Bundle)]
@@ -37,6 +37,7 @@ impl Default for TileMapBundle {
 #[derive(Bundle)]
 pub(crate) struct ChunkBundle {
     pub chunk: Chunk,
+    pub chunk_gpu_data: Handle<ChunkGpuData>,
     pub texture_atlas: Handle<TextureAtlas>,
     pub draw: Draw,
     pub visible: Visible,
@@ -50,7 +51,8 @@ pub(crate) struct ChunkBundle {
 impl Default for ChunkBundle {
     fn default() -> Self {
         Self {
-            chunk: Chunk::default(),
+            chunk: Default::default(),
+            chunk_gpu_data: Default::default(),
             render_pipelines: RenderPipelines::from_pipelines(vec![RenderPipeline::new(
                 TILEMAP_PIPELINE_HANDLE.typed(),
             )]),

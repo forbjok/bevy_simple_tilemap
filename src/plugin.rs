@@ -3,6 +3,8 @@ use bevy::{
     render::{pipeline::PipelineDescriptor, render_graph::RenderGraph},
 };
 
+use crate::tilemap::ChunkGpuData;
+
 #[derive(Default)]
 pub struct SimpleTileMapPlugin;
 
@@ -14,32 +16,33 @@ enum SimpleTileMapStage {
 
 impl Plugin for SimpleTileMapPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_stage_before(
-            CoreStage::PostUpdate,
-            SimpleTileMapStage::Update,
-            SystemStage::parallel(),
-        )
-        .add_stage_after(
-            SimpleTileMapStage::Update,
-            SimpleTileMapStage::Remesh,
-            SystemStage::parallel(),
-        )
-        .add_system_to_stage(
-            SimpleTileMapStage::Update,
-            crate::tilemap::update_chunks_system.system(),
-        )
-        .add_system_to_stage(
-            SimpleTileMapStage::Update,
-            crate::tilemap::propagate_visibility_system.system(),
-        )
-        .add_system_to_stage(
-            SimpleTileMapStage::Update,
-            crate::tilemap::tilemap_frustum_culling_system.system(),
-        )
-        .add_system_to_stage(
-            SimpleTileMapStage::Remesh,
-            crate::tilemap::remesh_chunks_system.system(),
-        );
+        app.add_asset::<ChunkGpuData>()
+            .add_stage_before(
+                CoreStage::PostUpdate,
+                SimpleTileMapStage::Update,
+                SystemStage::parallel(),
+            )
+            .add_stage_after(
+                SimpleTileMapStage::Update,
+                SimpleTileMapStage::Remesh,
+                SystemStage::parallel(),
+            )
+            .add_system_to_stage(
+                SimpleTileMapStage::Update,
+                crate::tilemap::update_chunks_system.system(),
+            )
+            .add_system_to_stage(
+                SimpleTileMapStage::Update,
+                crate::tilemap::propagate_visibility_system.system(),
+            )
+            .add_system_to_stage(
+                SimpleTileMapStage::Update,
+                crate::tilemap::tilemap_frustum_culling_system.system(),
+            )
+            .add_system_to_stage(
+                SimpleTileMapStage::Remesh,
+                crate::tilemap::remesh_chunks_system.system(),
+            );
 
         let world = app.world_mut();
 

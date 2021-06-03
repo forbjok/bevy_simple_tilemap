@@ -2,12 +2,15 @@ use bitflags::bitflags;
 use std::sync::Mutex;
 
 use bevy::{
+    core::Byteable,
     prelude::*,
+    reflect::TypeUuid,
     render::{
         camera::{ActiveCameras, Camera},
         draw::OutsideFrustum,
         mesh::Indices,
         pipeline::PrimitiveTopology,
+        renderer::RenderResources,
     },
     tasks::AsyncComputeTaskPool,
     utils::{HashMap, HashSet},
@@ -29,6 +32,23 @@ pub struct Chunk {
     tiles: Vec<Option<Tile>>,
     needs_remesh: bool,
     size_in_pixels: Vec2,
+}
+
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct TileGpuData {
+    pub sprite_index: u32,
+    pub color: Vec4,
+    pub flags: u32,
+}
+
+unsafe impl Byteable for TileGpuData {}
+
+#[derive(Debug, Default, RenderResources, TypeUuid)]
+#[uuid = "54d394ec-459c-48d3-9562-35fce6e88bda"]
+pub struct ChunkGpuData {
+    #[render_resources(buffer)]
+    pub tiles: Vec<TileGpuData>,
 }
 
 bitflags! {
@@ -118,6 +138,16 @@ impl TileMap {
     }
 }
 
+impl From<&Tile> for TileGpuData {
+    fn from(tile: &Tile) -> Self {
+        Self {
+            sprite_index: tile.sprite_index,
+            color: tile.color.into(),
+            flags: tile.flags.bits(),
+        }
+    }
+}
+
 /// Calculate chunk position based on tile position
 #[inline]
 fn calc_chunk_pos(tile_pos: IVec3) -> IVec3 {
@@ -156,6 +186,7 @@ fn row_major_pos(index: usize) -> IVec2 {
 pub(crate) fn update_chunks_system(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut chunk_gpu_datas: ResMut<Assets<ChunkGpuData>>,
     mut tilemap_query: Query<(Entity, &mut TileMap, &mut TileMapCache, &Handle<TextureAtlas>)>,
     mut chunk_query: Query<&mut Chunk>,
     texture_atlases: Res<Assets<TextureAtlas>>,
@@ -223,6 +254,9 @@ pub(crate) fn update_chunks_system(
                 // Set tiles in chunk
                 chunk.set_tiles(tiles.drain(..));
 
+                let chunk_gpu_data = ChunkGpuData::default();
+                let chunk_gpu_data = chunk_gpu_datas.add(chunk_gpu_data);
+
                 // Determine tile size in pixels from first sprite in TextureAtlas.
                 // It is assumed and mandated that all sprites in the sprite sheet are the same size.
                 let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
@@ -243,6 +277,7 @@ pub(crate) fn update_chunks_system(
                     .spawn()
                     .insert_bundle(ChunkBundle {
                         chunk,
+                        chunk_gpu_data,
                         texture_atlas: texture_atlas_handle.clone(),
                         mesh,
                         transform: Transform::from_translation(chunk_translation),
@@ -266,85 +301,78 @@ pub(crate) fn update_chunks_system(
 
 /// Remesh changed chunks
 pub(crate) fn remesh_chunks_system(
-    mut chunk_query: Query<(&mut Chunk, &Handle<Mesh>, &Visible), Without<OutsideFrustum>>,
+    mut chunk_query: Query<(&mut Chunk, &Handle<ChunkGpuData>, &Handle<Mesh>, &Visible), Without<OutsideFrustum>>,
+    chunk_gpu_datas: ResMut<Assets<ChunkGpuData>>,
     meshes: ResMut<Assets<Mesh>>,
     task_pool: Res<AsyncComputeTaskPool>,
 ) {
     const VERTICES_PER_TILE: usize = 4;
     const INDICES_PER_TILE: usize = 6;
 
+    let chunk_gpu_datas = Mutex::new(chunk_gpu_datas);
     let meshes = Mutex::new(meshes);
 
     //let remesh_time = Instant::now();
 
-    chunk_query.par_for_each_mut(&task_pool, 8, |(mut chunk, mesh_handle, visible)| {
-        if !chunk.needs_remesh || !visible.is_visible {
-            return;
-        }
+    chunk_query.par_for_each_mut(
+        &task_pool,
+        8,
+        |(mut chunk, chunk_gpu_data_handle, mesh_handle, visible)| {
+            if !chunk.needs_remesh || !visible.is_visible {
+                return;
+            }
 
-        let tile_count = chunk.tiles.len();
+            let tile_count = chunk.tiles.len();
 
-        let mut positions: Vec<[f32; 2]> = Vec::with_capacity(VERTICES_PER_TILE * tile_count);
-        let mut sprite_indexes: Vec<u32> = Vec::with_capacity(VERTICES_PER_TILE * tile_count);
-        let mut sprite_colors: Vec<[f32; 4]> = Vec::with_capacity(VERTICES_PER_TILE * tile_count);
-        let mut tile_flags: Vec<u32> = Vec::with_capacity(VERTICES_PER_TILE * tile_count);
-        let mut indices: Vec<u32> = Vec::with_capacity(INDICES_PER_TILE * tile_count);
-        let mut index: u32 = 0;
+            let mut positions: Vec<[f32; 2]> = Vec::with_capacity(VERTICES_PER_TILE * tile_count);
+            let mut indices: Vec<u32> = Vec::with_capacity(INDICES_PER_TILE * tile_count);
+            let mut index: u32 = 0;
 
-        for (i, tile) in chunk
-            .tiles
-            .iter()
-            .enumerate()
-            .filter_map(|(i, t)| t.as_ref().map(|t| (i, t)))
-        {
-            // Calculate position in chunk based on tile index
-            let pos = row_major_pos(i).as_f32();
+            let mut tiles: Vec<TileGpuData> = Vec::with_capacity(tile_count);
 
-            positions.extend(
-                [
-                    [pos.x, pos.y],
-                    [pos.x, pos.y + 1.0],
-                    [pos.x + 1.0, pos.y + 1.0],
-                    [pos.x + 1.0, pos.y],
-                ]
-                .iter(),
-            );
+            for (i, tile) in chunk
+                .tiles
+                .iter()
+                .enumerate()
+                .filter_map(|(i, t)| t.as_ref().map(|t| (i, t)))
+            {
+                tiles.push(tile.into());
 
-            sprite_indexes.extend(
-                [
-                    tile.sprite_index,
-                    tile.sprite_index,
-                    tile.sprite_index,
-                    tile.sprite_index,
-                ]
-                .iter(),
-            );
+                // Calculate position in chunk based on tile index
+                let pos = row_major_pos(i).as_f32();
 
-            let tile_color: [f32; 4] = tile.color.into();
-            sprite_colors.extend([tile_color, tile_color, tile_color, tile_color].iter());
+                positions.extend(
+                    [
+                        [pos.x, pos.y],
+                        [pos.x, pos.y + 1.0],
+                        [pos.x + 1.0, pos.y + 1.0],
+                        [pos.x + 1.0, pos.y],
+                    ]
+                    .iter(),
+                );
 
-            let tf_bits = tile.flags.bits();
-            tile_flags.extend([tf_bits, tf_bits, tf_bits, tf_bits].iter());
+                indices.extend([index, index + 2, index + 1, index, index + 3, index + 2].iter());
 
-            indices.extend([index, index + 2, index + 1, index, index + 3, index + 2].iter());
+                index += 4;
+            }
 
-            index += 4;
-        }
+            let mut chunk_gpu_datas = chunk_gpu_datas.lock().unwrap();
+            if let Some(chunk_gpu_data) = chunk_gpu_datas.get_mut(chunk_gpu_data_handle) {
+                *chunk_gpu_data = ChunkGpuData { tiles };
+            }
 
-        let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        new_mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-        new_mesh.set_attribute("SpriteIndex", sprite_indexes);
-        new_mesh.set_attribute("SpriteColor", sprite_colors);
-        new_mesh.set_attribute("TileFlags", tile_flags);
-        new_mesh.set_indices(Some(Indices::U32(indices)));
+            let mut new_mesh = Mesh::new(PrimitiveTopology::TriangleList);
+            new_mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+            new_mesh.set_indices(Some(Indices::U32(indices)));
 
-        let mut meshes = meshes.lock().unwrap();
-        if let Some(mesh) = meshes.get_mut(mesh_handle) {
-            *mesh = new_mesh;
-        }
+            let mut meshes = meshes.lock().unwrap();
+            if let Some(mesh) = meshes.get_mut(mesh_handle) {
+                *mesh = new_mesh;
+            }
 
-        chunk.needs_remesh = false;
-    });
+            chunk.needs_remesh = false;
+        },
+    );
 
     //dbg!(remesh_time.elapsed());
 }

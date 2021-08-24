@@ -204,6 +204,8 @@ pub(crate) fn update_chunks_system(
                     chunk.clear();
                 }
             }
+
+            tilemap.clear_all = false;
         }
 
         if !tilemap.clear_layers.is_empty() {

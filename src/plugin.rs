@@ -15,36 +15,35 @@ enum SimpleTileMapStage {
 }
 
 impl Plugin for SimpleTileMapPlugin {
-    fn build(&self, app: &mut AppBuilder) {
-        app.add_asset::<ChunkGpuData>()
-            .add_stage_before(
-                CoreStage::PostUpdate,
-                SimpleTileMapStage::Update,
-                SystemStage::parallel(),
-            )
-            .add_stage_after(
-                SimpleTileMapStage::Update,
-                SimpleTileMapStage::Remesh,
-                SystemStage::parallel(),
-            )
-            .add_system_to_stage(
-                SimpleTileMapStage::Update,
-                crate::tilemap::update_chunks_system.system(),
-            )
-            .add_system_to_stage(
-                SimpleTileMapStage::Update,
-                crate::tilemap::propagate_visibility_system.system(),
-            )
-            .add_system_to_stage(
-                SimpleTileMapStage::Update,
-                crate::tilemap::tilemap_frustum_culling_system.system(),
-            )
-            .add_system_to_stage(
-                SimpleTileMapStage::Remesh,
-                crate::tilemap::remesh_chunks_system.system(),
-            );
+    fn build(&self, app: &mut App) {
+        app.add_stage_before(
+            CoreStage::PostUpdate,
+            SimpleTileMapStage::Update,
+            SystemStage::parallel(),
+        )
+        .add_stage_after(
+            SimpleTileMapStage::Update,
+            SimpleTileMapStage::Remesh,
+            SystemStage::parallel(),
+        )
+        .add_system_to_stage(
+            SimpleTileMapStage::Update,
+            crate::tilemap::update_chunks_system.system(),
+        )
+        .add_system_to_stage(
+            SimpleTileMapStage::Update,
+            crate::tilemap::propagate_visibility_system.system(),
+        )
+        .add_system_to_stage(
+            SimpleTileMapStage::Update,
+            crate::tilemap::tilemap_frustum_culling_system.system(),
+        )
+        .add_system_to_stage(
+            SimpleTileMapStage::Remesh,
+            crate::tilemap::remesh_chunks_system.system(),
+        );
 
-        let world = app.world_mut();
+        let world = &mut app.world;
 
         let world_cell = world.cell();
         let mut render_graph = world_cell.get_resource_mut::<RenderGraph>().unwrap();

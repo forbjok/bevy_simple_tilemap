@@ -7,7 +7,7 @@ use bevy::{
 use bevy_simple_tilemap::prelude::*;
 
 fn main() {
-    App::build()
+    App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(SimpleTileMapPlugin)
         .add_system(input_system.system())

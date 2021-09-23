@@ -11,7 +11,7 @@ repository = "https://github.com/forbjok/bevy_simple_tilemap.git"
 
 [dependencies]
 bitflags = "1.2.1"
-bevy = { git = "https://github.com/bevyengine/bevy.git" }
+bevy = { version = "0.5.0" }
 
 [[example]]
 name = "benchmark"
@@ -24,3 +24,7 @@ path = "examples/multilayer.rs"
 [[example]]
 name = "simple"
 path = "examples/simple.rs"
+
+
+[patch.crates-io]
+bevy = { git = "https://github.com/bevyengine/bevy.git" }

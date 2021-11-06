@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build:
+        - stable
+        - nightly
+        - windows-msvc
+
+        include:
+        - build: stable
+          os: ubuntu-latest
+          toolchain: stable
+
+        - build: nightly
+          os: ubuntu-latest
+          toolchain: nightly
+
+        - build: windows-msvc
+          os: windows-latest
+          toolchain: stable
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install required packages
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get install -y libasound2-dev libudev-dev
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.toolchain }}
+        target: ${{ matrix.target }}
+        profile: minimal
+        override: true
+
+    - name: Run tests
+      run: cargo test ${{ matrix.options }} --verbose

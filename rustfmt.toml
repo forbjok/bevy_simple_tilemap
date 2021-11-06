@@ -3,5 +3,5 @@ hard_tabs = false
 tab_spaces = 4
 reorder_imports = true
 reorder_modules = true
-edition = "2018"
+edition = "2021"
 use_field_init_shorthand = true

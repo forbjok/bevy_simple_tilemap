@@ -2,7 +2,7 @@ use bitflags::bitflags;
 use std::sync::Mutex;
 
 use bevy::{
-    core::Byteable,
+    core::{Pod, Zeroable},
     prelude::*,
     reflect::TypeUuid,
     render::{
@@ -26,7 +26,7 @@ const CHUNK_WIDTH_USIZE: usize = CHUNK_WIDTH as usize;
 
 const TILES_PER_CHUNK: usize = (CHUNK_WIDTH * CHUNK_HEIGHT) as usize;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Component, Default)]
 pub struct Chunk {
     origin: IVec3,
     tiles: Vec<Option<Tile>>,
@@ -35,14 +35,13 @@ pub struct Chunk {
 }
 
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Pod, Zeroable)]
 pub struct TileGpuData {
     pub sprite_index: u32,
-    pub color: Vec4,
     pub flags: u32,
+    pad: [u32; 2],
+    pub color: Vec4,
 }
-
-unsafe impl Byteable for TileGpuData {}
 
 #[derive(Debug, Default, RenderResources, TypeUuid)]
 #[uuid = "54d394ec-459c-48d3-9562-35fce6e88bda"]
@@ -66,7 +65,7 @@ pub struct Tile {
     pub flags: TileFlags,
 }
 
-#[derive(Default)]
+#[derive(Component, Default)]
 pub struct TileMap {
     chunks: HashMap<IVec3, Entity>,
     tile_changes: Vec<(IVec3, Option<Tile>)>,
@@ -74,7 +73,7 @@ pub struct TileMap {
     clear_layers: HashSet<i32>,
 }
 
-#[derive(Default)]
+#[derive(Component, Default)]
 pub struct TileMapCache {
     tile_changes_by_chunk: HashMap<IVec3, Vec<(IVec3, Option<Tile>)>>,
 }
@@ -142,8 +141,9 @@ impl From<&Tile> for TileGpuData {
     fn from(tile: &Tile) -> Self {
         Self {
             sprite_index: tile.sprite_index,
-            color: tile.color.into(),
             flags: tile.flags.bits(),
+            pad: Default::default(),
+            color: tile.color.into(),
         }
     }
 }
@@ -268,7 +268,7 @@ pub(crate) fn update_chunks_system(
                 chunk.size_in_pixels = Vec2::new(CHUNK_WIDTH as f32, CHUNK_HEIGHT as f32) * tile_size;
 
                 // Calculate chunk translation
-                let chunk_translation = (chunk_origin.truncate().as_f32() * tile_size).extend(chunk_origin.z as f32);
+                let chunk_translation = (chunk_origin.truncate().as_vec2() * tile_size).extend(chunk_origin.z as f32);
 
                 // Create new mesh for chunk
                 let mesh = Mesh::new(PrimitiveTopology::TriangleList);
@@ -341,7 +341,7 @@ pub(crate) fn remesh_chunks_system(
                 tiles.push(tile.into());
 
                 // Calculate position in chunk based on tile index
-                let pos = row_major_pos(i).as_f32();
+                let pos = row_major_pos(i).as_vec2();
 
                 positions.extend(
                     [

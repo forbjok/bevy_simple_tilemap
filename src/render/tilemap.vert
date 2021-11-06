@@ -28,8 +28,9 @@ layout(set = 2, binding = 0) uniform Transform {
 
 struct TileGpuData {
   uint sprite_index;
-  vec4 color;
   uint flags;
+  uvec2 pad;
+  vec4 color;
 };
 
 layout(set = 3, binding = 0) buffer ChunkGpuData_tiles {

@@ -15,7 +15,7 @@ enum SimpleTileMapStage {
 }
 
 impl Plugin for SimpleTileMapPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_asset::<ChunkGpuData>()
             .add_stage_before(
                 CoreStage::PostUpdate,
@@ -44,7 +44,7 @@ impl Plugin for SimpleTileMapPlugin {
                 crate::tilemap::remesh_chunks_system.system(),
             );
 
-        let world = app.world_mut();
+        let world = &mut app.world;
 
         let world_cell = world.cell();
         let mut render_graph = world_cell.get_resource_mut::<RenderGraph>().unwrap();

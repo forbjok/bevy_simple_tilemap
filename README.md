@@ -1,5 +1,9 @@
 # bevy_simple_tilemap
 
+[![CI](https://github.com/forbjok/bevy_simple_tilemap/actions/workflows/ci.yml/badge.svg)](https://github.com/forbjok/bevy_simple_tilemap/actions/workflows/ci.yml)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/forbjok/bevy_simple_tilemap)
+![Crates.io](https://img.shields.io/crates/v/bevy_simple_tilemap)
+
 Refreshingly simple tilemap implementation for Bevy Engine.
 
 ## Why another tilemap?

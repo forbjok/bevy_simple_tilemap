@@ -100,7 +100,7 @@ impl Chunk {
 
         for (pos, tile) in tiles {
             let pos = pos - chunk_origin;
-            let index = row_major_index(pos.into());
+            let index = row_major_index(IVec2::new(pos.x, pos.y));
 
             self.tiles[index] = tile;
         }

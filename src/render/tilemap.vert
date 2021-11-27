@@ -18,7 +18,7 @@ struct Rect {
     vec2 end;
 };
 
-layout(set = 1, binding = 1) buffer TextureAtlas_textures {
+layout(set = 1, binding = 1) readonly buffer TextureAtlas_textures {
     Rect[] Textures;
 };
 
@@ -33,7 +33,7 @@ struct TileGpuData {
   vec4 color;
 };
 
-layout(set = 3, binding = 0) buffer ChunkGpuData_tiles {
+layout(set = 3, binding = 0) readonly buffer ChunkGpuData_tiles {
     TileGpuData[] Tiles;
 };
 

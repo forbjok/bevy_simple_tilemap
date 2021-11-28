@@ -1,16 +1,5 @@
 use bevy::asset::{Assets, HandleUntyped};
 use bevy::reflect::TypeUuid;
-use bevy::render::render_graph::AssetRenderResourcesNode;
-use bevy::render::{
-    pipeline::{
-        BlendComponent, BlendFactor, BlendOperation, BlendState, ColorTargetState, ColorWrite, CompareFunction,
-        DepthBiasState, DepthStencilState, FrontFace, PipelineDescriptor, PolygonMode, PrimitiveState,
-        PrimitiveTopology, StencilFaceState, StencilState,
-    },
-    render_graph::RenderGraph,
-    shader::{Shader, ShaderStage, ShaderStages},
-    texture::TextureFormat,
-};
 
 use crate::tilemap::ChunkGpuData;
 

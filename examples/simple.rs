@@ -1,14 +1,10 @@
-use bevy::{
-    math::ivec3,
-    prelude::*,
-    render::camera::{ActiveCameras, Camera},
-};
+use bevy::{PipelinedDefaultPlugins, math::ivec3, prelude::*, render::camera::{ActiveCameras, Camera}};
 
 use bevy_simple_tilemap::prelude::*;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(PipelinedDefaultPlugins)
         .add_plugin(SimpleTileMapPlugin)
         .add_system(input_system.system())
         .add_startup_system(setup.system())

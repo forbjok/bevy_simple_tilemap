@@ -15,7 +15,6 @@ impl Plugin for SimpleTileMapPlugin {
         let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
         let sprite_shader = Shader::from_wgsl(include_str!("render/tilemap.wgsl"));
         shaders.set_untracked(TILEMAP_SHADER_HANDLE, sprite_shader);
-        app.add_asset::<TextureAtlas>().register_type::<Sprite>();
         let render_app = app.sub_app(RenderApp);
         render_app
             .init_resource::<ImageBindGroups>()
@@ -38,5 +37,6 @@ impl Plugin for SimpleTileMapPlugin {
             .get_resource::<DrawFunctions<Transparent2d>>()
             .unwrap()
             .write()
-            .add(draw_sprite);    }
+            .add(draw_sprite);
+    }
 }

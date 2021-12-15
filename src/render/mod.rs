@@ -29,7 +29,7 @@ use crevice::std140::AsStd140;
 use crate::ph_tilemap::{TextureAtlasTilemap, Tilemap};
 
 pub const TILEMAP_SHADER_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 8852463601721108623);
+    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 9765236402292098257);
 
 pub struct TilemapPipeline {
     view_layout: BindGroupLayout,

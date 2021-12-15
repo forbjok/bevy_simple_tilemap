@@ -21,7 +21,7 @@ fn main() {
 fn input_system(
     active_cameras: Res<ActiveCameras>,
     mut camera_transform_query: Query<(&mut Transform,), With<Camera>>,
-    mut tilemap_visible_query: Query<&mut Visible, With<TileMap>>,
+    mut tilemap_visible_query: Query<&mut Visibility, With<TileMap>>,
     keyboard_input: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {

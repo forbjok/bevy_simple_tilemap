@@ -1,10 +1,10 @@
-use bevy::{PipelinedDefaultPlugins, math::ivec3, prelude::*, render::camera::{ActiveCameras, Camera}};
+use bevy::{math::ivec3, prelude::*, render::camera::{ActiveCameras, Camera}};
 
 use bevy_simple_tilemap::prelude::*;
 
 fn main() {
     App::new()
-        .add_plugins(PipelinedDefaultPlugins)
+        .add_plugins(DefaultPlugins)
         .add_plugin(SimpleTileMapPlugin)
         .add_system(input_system.system())
         .add_startup_system(setup.system())
@@ -14,7 +14,7 @@ fn main() {
 fn input_system(
     active_cameras: Res<ActiveCameras>,
     mut camera_transform_query: Query<(&mut Transform,), With<Camera>>,
-    mut tilemap_visible_query: Query<&mut Visible, With<TileMap>>,
+    mut tilemap_visible_query: Query<&mut Visibility, With<TileMap>>,
     keyboard_input: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {

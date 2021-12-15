@@ -7,10 +7,7 @@ use bevy::{
     reflect::TypeUuid,
     render::{
         camera::{ActiveCameras, Camera},
-        draw::OutsideFrustum,
-        mesh::Indices,
-        pipeline::PrimitiveTopology,
-        renderer::RenderResources,
+        mesh::Indices, render_resource::PrimitiveTopology,
     },
     tasks::AsyncComputeTaskPool,
     utils::{HashMap, HashSet},
@@ -43,10 +40,9 @@ pub struct TileGpuData {
     pub color: Vec4,
 }
 
-#[derive(Debug, Default, RenderResources, TypeUuid)]
+#[derive(Debug, Default, TypeUuid)]
 #[uuid = "54d394ec-459c-48d3-9562-35fce6e88bda"]
 pub struct ChunkGpuData {
-    #[render_resources(buffer)]
     pub tiles: Vec<TileGpuData>,
 }
 
@@ -303,7 +299,7 @@ pub(crate) fn update_chunks_system(
 
 /// Remesh changed chunks
 pub(crate) fn remesh_chunks_system(
-    mut chunk_query: Query<(&mut Chunk, &Handle<ChunkGpuData>, &Handle<Mesh>, &Visible), Without<OutsideFrustum>>,
+    mut chunk_query: Query<(&mut Chunk, &Handle<ChunkGpuData>, &Handle<Mesh>, &Visibility)>,
     chunk_gpu_datas: ResMut<Assets<ChunkGpuData>>,
     meshes: ResMut<Assets<Mesh>>,
     task_pool: Res<AsyncComputeTaskPool>,
@@ -387,13 +383,13 @@ pub(crate) fn remesh_chunks_system(
 
 /// Propagate TileMap visibility to chunks
 pub(crate) fn propagate_visibility_system(
-    mut tilemap_query: Query<(&TileMap, &Visible), (Changed<Visible>, With<TileMap>)>,
-    mut chunk_query: Query<&mut Visible, (With<Chunk>, Without<TileMap>)>,
+    mut tilemap_query: Query<(&TileMap, &Visibility), (Changed<Visibility>, With<TileMap>)>,
+    mut chunk_query: Query<&mut Visibility, (With<Chunk>, Without<TileMap>)>,
 ) {
-    for (tilemap, tilemap_visible) in tilemap_query.iter_mut() {
+    for (tilemap, tilemap_visibility) in tilemap_query.iter_mut() {
         for chunk_entity in tilemap.chunks.values() {
             if let Ok(mut chunk_visible) = chunk_query.get_mut(*chunk_entity) {
-                chunk_visible.is_visible = tilemap_visible.is_visible;
+                chunk_visible.is_visible = tilemap_visibility.is_visible;
             }
         }
     }
@@ -405,7 +401,6 @@ pub(crate) fn tilemap_frustum_culling_system(
     windows: Res<Windows>,
     active_cameras: Res<ActiveCameras>,
     camera_transform_query: Query<&GlobalTransform, With<Camera>>,
-    chunk_outside_frustum_query: Query<&OutsideFrustum, With<Chunk>>,
     chunk_query: Query<(Entity, &GlobalTransform, &Chunk)>,
 ) {
     enum Anchor {
@@ -471,13 +466,5 @@ pub(crate) fn tilemap_frustum_culling_system(
             position: chunk_transform.translation.truncate(),
             size,
         };
-
-        if camera_rects.iter().any(|cr| cr.is_intersecting(&chunk_rect)) {
-            if chunk_outside_frustum_query.get(entity).is_ok() {
-                commands.entity(entity).remove::<OutsideFrustum>();
-            }
-        } else if chunk_outside_frustum_query.get(entity).is_err() {
-            commands.entity(entity).insert(OutsideFrustum);
-        }
     }
 }

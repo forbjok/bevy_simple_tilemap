@@ -14,6 +14,15 @@ struct VertexOutput {
     [[builtin(position)]] position: vec4<f32>;
 };
 
+struct TileGpuData {
+  sprite_index: u32;
+  flags: u32;
+  pad: vec2<u32>;
+  color: vec4<f32>;
+};
+//[[group(3), binding(0)]]
+//var
+
 [[stage(vertex)]]
 fn vertex(
     [[location(0)]] vertex_position: vec3<f32>,

@@ -14,6 +14,7 @@ pub struct TileMapBundle {
     pub visibility: Visibility,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
+    pub computed_visibility: ComputedVisibility,
 }
 
 impl Default for TileMapBundle {
@@ -25,6 +26,7 @@ impl Default for TileMapBundle {
             texture_atlas: Default::default(),
             transform: Default::default(),
             global_transform: Default::default(),
+            computed_visibility: Default::default(),
         }
     }
 }

@@ -1,18 +1,14 @@
 use bevy::{prelude::*, reflect::TypeUuid, render::{render_resource::{Shader, SpecializedPipelines}, RenderStage, render_phase::DrawFunctions, RenderApp}, core_pipeline::Transparent2d};
 
-use crate::{tilemap::ChunkGpuData, render::{TilemapPipeline, ImageBindGroups, ExtractedTilemaps, TilemapMeta, DrawTilemap}};
+use crate::{tilemap::ChunkGpuData, render::{TilemapPipeline, ImageBindGroups, ExtractedTilemaps, TilemapMeta, DrawTilemap, TilemapAssetEvents, TILEMAP_SHADER_HANDLE}};
 
 #[derive(Default)]
 pub struct SimpleTileMapPlugin;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, StageLabel)]
-enum SimpleTileMapStage {
-    Update,
-    Remesh,
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
+pub enum TilemapSystem {
+    ExtractTilemap,
 }
-
-pub const TILEMAP_SHADER_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 8852463601721108623);
 
 impl Plugin for SimpleTileMapPlugin {
     fn build(&self, app: &mut App) {
@@ -27,7 +23,12 @@ impl Plugin for SimpleTileMapPlugin {
             .init_resource::<SpecializedPipelines<TilemapPipeline>>()
             .init_resource::<TilemapMeta>()
             .init_resource::<ExtractedTilemaps>()
-            .add_system_to_stage(RenderStage::Extract, crate::render::extract_tilemaps)
+            .init_resource::<TilemapAssetEvents>()
+            .add_system_to_stage(
+                RenderStage::Extract,
+                crate::render::extract_tilemaps.label(TilemapSystem::ExtractTilemap),
+            )
+            .add_system_to_stage(RenderStage::Extract, crate::render::extract_tilemap_events)
             .add_system_to_stage(RenderStage::Prepare, crate::render::prepare_tilemaps)
             .add_system_to_stage(RenderStage::Queue, crate::render::queue_tilemaps);
 
@@ -37,6 +38,5 @@ impl Plugin for SimpleTileMapPlugin {
             .get_resource::<DrawFunctions<Transparent2d>>()
             .unwrap()
             .write()
-            .add(draw_sprite);
-    }
+            .add(draw_sprite);    }
 }

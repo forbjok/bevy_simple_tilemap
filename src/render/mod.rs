@@ -26,11 +26,10 @@ use bevy::utils::HashMap;
 use bytemuck::{Pod, Zeroable};
 use crevice::std140::AsStd140;
 
-mod ph_tilemap;
-use ph_tilemap::{TextureAtlasTilemap, Tilemap};
+use crate::ph_tilemap::{TextureAtlasTilemap, Tilemap};
 
 pub const TILEMAP_SHADER_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 9765236402292098257);
+    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 8852463601721108623);
 
 pub struct TilemapPipeline {
     view_layout: BindGroupLayout,

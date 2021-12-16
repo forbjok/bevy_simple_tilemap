@@ -13,8 +13,6 @@ use bevy::{
     utils::{HashMap, HashSet},
 };
 
-use crate::bundle::ChunkBundle;
-
 const CHUNK_WIDTH: u32 = 64;
 const CHUNK_HEIGHT: u32 = 64;
 const CHUNK_WIDTH_I32: i32 = CHUNK_WIDTH as i32;
@@ -23,12 +21,11 @@ const CHUNK_WIDTH_USIZE: usize = CHUNK_WIDTH as usize;
 
 const TILES_PER_CHUNK: usize = (CHUNK_WIDTH * CHUNK_HEIGHT) as usize;
 
-#[derive(Debug, Component, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Chunk {
-    origin: IVec3,
-    tiles: Vec<Option<Tile>>,
-    needs_remesh: bool,
-    size_in_pixels: Vec2,
+    pub origin: IVec3,
+    pub tiles: Vec<Option<Tile>>,
+    pub needs_remesh: bool,
 }
 
 #[repr(C)]
@@ -63,7 +60,7 @@ pub struct Tile {
 
 #[derive(Component, Default)]
 pub struct TileMap {
-    chunks: HashMap<IVec3, Entity>,
+    pub chunks: HashMap<IVec3, Chunk>,
     tile_changes: Vec<(IVec3, Option<Tile>)>,
     clear_all: bool,
     clear_layers: HashSet<i32>,
@@ -172,7 +169,7 @@ fn row_major_index(pos: IVec2) -> usize {
 
 /// Calculate row major position from index
 #[inline]
-fn row_major_pos(index: usize) -> IVec2 {
+pub fn row_major_pos(index: usize) -> IVec2 {
     let y = index / CHUNK_WIDTH_USIZE;
 
     IVec2::new((index - (y * CHUNK_WIDTH_USIZE as usize)) as i32, y as i32)
@@ -181,10 +178,7 @@ fn row_major_pos(index: usize) -> IVec2 {
 /// Update and mark chunks for remeshing, based on queued tile changes
 pub(crate) fn update_chunks_system(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut chunk_gpu_datas: ResMut<Assets<ChunkGpuData>>,
     mut tilemap_query: Query<(Entity, &mut TileMap, &mut TileMapCache, &Handle<TextureAtlas>)>,
-    mut chunk_query: Query<&mut Chunk>,
     texture_atlases: Res<Assets<TextureAtlas>>,
 ) {
     //let update_chunk_time = Instant::now();
@@ -195,10 +189,8 @@ pub(crate) fn update_chunks_system(
 
         // A full clear was requested. Clear all chunks.
         if tilemap.clear_all {
-            for chunk_entity in tilemap.chunks.values() {
-                if let Ok(mut chunk) = chunk_query.get_mut(*chunk_entity) {
-                    chunk.clear();
-                }
+            for chunk in tilemap.chunks.values_mut() {
+                chunk.clear();
             }
 
             tilemap.clear_all = false;
@@ -209,10 +201,8 @@ pub(crate) fn update_chunks_system(
 
             // Process clear layer requests
             for layer in clear_layers.into_iter() {
-                for (_, chunk_entity) in tilemap.chunks.iter().filter(|(pos, _)| pos.z == layer) {
-                    if let Ok(mut chunk) = chunk_query.get_mut(*chunk_entity) {
-                        chunk.clear();
-                    }
+                for (_, chunk) in tilemap.chunks.iter_mut().filter(|(pos, _)| pos.z == layer) {
+                    chunk.clear();
                 }
             }
         }
@@ -232,15 +222,14 @@ pub(crate) fn update_chunks_system(
                 continue;
             }
 
-            if let Some(chunk_entity) = tilemap.chunks.get(&chunk_pos) {
+            if let Some(chunk) = tilemap.chunks.get_mut(&chunk_pos) {
                 // Chunk already exists...
-                if let Ok(mut chunk) = chunk_query.get_mut(*chunk_entity) {
-                    // Set tiles in chunk
-                    chunk.set_tiles(tiles.drain(..));
 
-                    // Mark chunk for remesh
-                    chunk.needs_remesh = true;
-                }
+                // Set tiles in chunk
+                chunk.set_tiles(tiles.drain(..));
+
+                // Mark chunk for remesh
+                chunk.needs_remesh = true;
             } else {
                 // Chunk does not exist yet, and needs to be spawned...
 
@@ -252,44 +241,14 @@ pub(crate) fn update_chunks_system(
                 // Set tiles in chunk
                 chunk.set_tiles(tiles.drain(..));
 
-                let chunk_gpu_data = ChunkGpuData::default();
-                let chunk_gpu_data = chunk_gpu_datas.add(chunk_gpu_data);
-
                 // Determine tile size in pixels from first sprite in TextureAtlas.
                 // It is assumed and mandated that all sprites in the sprite sheet are the same size.
                 let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
                 let tile0_tex = texture_atlas.textures.get(0).unwrap();
                 let tile_size = Vec2::new(tile0_tex.width(), tile0_tex.height());
 
-                chunk.size_in_pixels = Vec2::new(CHUNK_WIDTH as f32, CHUNK_HEIGHT as f32) * tile_size;
-
-                // Calculate chunk translation
-                let chunk_translation = (chunk_origin.truncate().as_vec2() * tile_size).extend(chunk_origin.z as f32);
-
-                // Create new mesh for chunk
-                let mesh = Mesh::new(PrimitiveTopology::TriangleList);
-                let mesh = meshes.add(mesh);
-
-                // Spawn chunk entity
-                let chunk_entity = commands
-                    .spawn()
-                    .insert_bundle(ChunkBundle {
-                        chunk,
-                        chunk_gpu_data,
-                        texture_atlas: texture_atlas_handle.clone(),
-                        mesh,
-                        transform: Transform::from_translation(chunk_translation),
-                        ..Default::default()
-                    })
-                    .id();
-
-                // Make chunk entity a child of the tilemap.
-                // We use .push_children() for this, because simply inserting a Parent component
-                // appears to be buggy and does not properly update transforms upon insertion.
-                commands.entity(tilemap_entity).push_children(&[chunk_entity]);
-
                 // Store chunk entity in the tilemap
-                tilemap.chunks.insert(*chunk_pos, chunk_entity);
+                tilemap.chunks.insert(*chunk_pos, chunk);
             }
         }
     }
@@ -297,6 +256,7 @@ pub(crate) fn update_chunks_system(
     //dbg!(update_chunk_time.elapsed());
 }
 
+/*
 /// Remesh changed chunks
 pub(crate) fn remesh_chunks_system(
     mut chunk_query: Query<(&mut Chunk, &Handle<ChunkGpuData>, &Handle<Mesh>, &Visibility)>,
@@ -380,21 +340,9 @@ pub(crate) fn remesh_chunks_system(
 
     //dbg!(remesh_time.elapsed());
 }
+ */
 
-/// Propagate TileMap visibility to chunks
-pub(crate) fn propagate_visibility_system(
-    mut tilemap_query: Query<(&TileMap, &Visibility), (Changed<Visibility>, With<TileMap>)>,
-    mut chunk_query: Query<&mut Visibility, (With<Chunk>, Without<TileMap>)>,
-) {
-    for (tilemap, tilemap_visibility) in tilemap_query.iter_mut() {
-        for chunk_entity in tilemap.chunks.values() {
-            if let Ok(mut chunk_visible) = chunk_query.get_mut(*chunk_entity) {
-                chunk_visible.is_visible = tilemap_visibility.is_visible;
-            }
-        }
-    }
-}
-
+ /*
 /// Perform frustum culling of chunks
 pub(crate) fn tilemap_frustum_culling_system(
     mut commands: Commands,
@@ -468,3 +416,4 @@ pub(crate) fn tilemap_frustum_culling_system(
         };
     }
 }
+ */

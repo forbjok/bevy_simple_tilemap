@@ -3,7 +3,7 @@ use bevy::{
 };
 
 use crate::{
-    tilemap::{Chunk, ChunkGpuData, TileMap, TileMapCache},
+    tilemap::{TileMap, TileMapCache},
 };
 
 #[derive(Bundle)]
@@ -27,31 +27,6 @@ impl Default for TileMapBundle {
             transform: Default::default(),
             global_transform: Default::default(),
             computed_visibility: Default::default(),
-        }
-    }
-}
-
-#[derive(Bundle)]
-pub(crate) struct ChunkBundle {
-    pub chunk: Chunk,
-    pub chunk_gpu_data: Handle<ChunkGpuData>,
-    pub texture_atlas: Handle<TextureAtlas>,
-    pub visibility: Visibility,
-    pub mesh: Handle<Mesh>,
-    pub transform: Transform,
-    pub global_transform: GlobalTransform,
-}
-
-impl Default for ChunkBundle {
-    fn default() -> Self {
-        Self {
-            chunk: Default::default(),
-            chunk_gpu_data: Default::default(),
-            visibility: Default::default(),
-            mesh: Default::default(),
-            texture_atlas: Default::default(),
-            transform: Default::default(),
-            global_transform: Default::default(),
         }
     }
 }

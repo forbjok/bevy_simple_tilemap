@@ -10,7 +10,7 @@ use bevy::ecs::{
     prelude::*,
     system::{lifetimeless::*, SystemState},
 };
-use bevy::math::{const_vec3, Mat4, Vec2, Vec3, Vec4Swizzles};
+use bevy::math::{const_vec3, Mat4, Vec2, Vec3, Vec4Swizzles, IVec2};
 use bevy::render::{
     color::Color,
     render_asset::RenderAssets,
@@ -26,7 +26,8 @@ use bevy::utils::HashMap;
 use bytemuck::{Pod, Zeroable};
 use crevice::std140::AsStd140;
 
-use crate::ph_tilemap::{TextureAtlasTilemap, Tilemap};
+use crate::{TileMap, TileFlags};
+use crate::tilemap::row_major_pos;
 
 pub const TILEMAP_SHADER_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 9765236402292098257);
@@ -161,19 +162,23 @@ impl SpecializedPipeline for TilemapPipeline {
     }
 }
 
+pub struct ExtractedTile {
+    pub pos: IVec2,
+    pub rect: Rect,
+    pub color: Color,
+    pub flags: TileFlags,
+}
+
 pub struct ExtractedTilemap {
     pub transform: Mat4,
-    pub color: Color,
-    pub rect: Rect,
     pub handle: Handle<Image>,
-    pub atlas_size: Option<Vec2>,
-    pub flip_x: bool,
-    pub flip_y: bool,
+    pub atlas_size: Vec2,
+    pub tiles: Vec<ExtractedTile>,
 }
 
 #[derive(Default)]
 pub struct ExtractedTilemaps {
-    pub sprites: Vec<ExtractedTilemap>,
+    pub tilemaps: Vec<ExtractedTilemap>,
 }
 
 #[derive(Default)]
@@ -213,57 +218,42 @@ pub fn extract_tilemaps(
     texture_atlases: Res<Assets<TextureAtlas>>,
     tilemap_query: Query<(
         &ComputedVisibility,
-        &Tilemap,
-        &GlobalTransform,
-        &Handle<Image>,
-    )>,
-    atlas_query: Query<(
-        &ComputedVisibility,
-        &TextureAtlasTilemap,
+        &TileMap,
         &GlobalTransform,
         &Handle<TextureAtlas>,
     )>,
 ) {
     let mut extracted_tilemaps = render_world.get_resource_mut::<ExtractedTilemaps>().unwrap();
-    extracted_tilemaps.sprites.clear();
-    for (computed_visibility, sprite, transform, handle) in tilemap_query.iter() {
+    extracted_tilemaps.tilemaps.clear();
+    for (computed_visibility, tilemap, transform, texture_atlas_handle) in tilemap_query.iter() {
         if !computed_visibility.is_visible {
             continue;
         }
-        if let Some(image) = images.get(handle) {
-            let size = image.texture_descriptor.size;
 
-            extracted_tilemaps.sprites.push(ExtractedTilemap {
-                atlas_size: None,
-                color: sprite.color,
-                transform: transform.compute_matrix(),
-                rect: Rect {
-                    min: Vec2::ZERO,
-                    max: sprite
-                        .custom_size
-                        .unwrap_or_else(|| Vec2::new(size.width as f32, size.height as f32)),
-                },
-                flip_x: sprite.flip_x,
-                flip_y: sprite.flip_y,
-                handle: handle.clone_weak(),
-            });
-        };
-    }
-    for (computed_visibility, atlas_tilemap, transform, texture_atlas_handle) in atlas_query.iter() {
-        if !computed_visibility.is_visible {
-            continue;
-        }
         if let Some(texture_atlas) = texture_atlases.get(texture_atlas_handle) {
             if images.contains(&texture_atlas.texture) {
-                let rect = texture_atlas.textures[atlas_tilemap.index as usize];
-                extracted_tilemaps.sprites.push(ExtractedTilemap {
-                    atlas_size: Some(texture_atlas.size),
-                    color: atlas_tilemap.color,
+                let mut tiles: Vec<ExtractedTile> = Vec::new();
+
+                for (pos, chunk) in tilemap.chunks.iter() {
+                    for (i, tile) in chunk.tiles.iter().enumerate() {
+                        if let Some(tile) = tile {
+                            let rect = texture_atlas.textures[tile.sprite_index as usize];
+
+                            tiles.push(ExtractedTile {
+                                pos: chunk.origin.truncate() + row_major_pos(i),
+                                rect,
+                                color: tile.color,
+                                flags: tile.flags,
+                            });
+                        }
+                    }
+                }
+
+                extracted_tilemaps.tilemaps.push(ExtractedTilemap {
                     transform: transform.compute_matrix(),
-                    rect,
-                    flip_x: atlas_tilemap.flip_x,
-                    flip_y: atlas_tilemap.flip_y,
-                    handle: texture_atlas.texture.clone_weak(),
+                    handle: texture_atlas.texture.clone(),
+                    atlas_size: texture_atlas.size,
+                    tiles,
                 });
             }
         }
@@ -330,7 +320,7 @@ pub fn prepare_tilemaps(
 
     // sort first by z and then by handle. this ensures that, when possible, batches span multiple z layers
     // batches won't span z-layers if there is another batch between them
-    extracted_tilemaps.sprites.sort_by(|a, b| {
+    extracted_tilemaps.tilemaps.sort_by(|a, b| {
         match FloatOrd(a.transform.w_axis[2]).cmp(&FloatOrd(b.transform.w_axis[2])) {
             Ordering::Equal => a.handle.cmp(&b.handle),
             other => other,
@@ -339,77 +329,66 @@ pub fn prepare_tilemaps(
 
     let mut start = 0;
     let mut end = 0;
-    let mut colored_start = 0;
-    let mut colored_end = 0;
     let mut current_batch_handle: Option<Handle<Image>> = None;
-    let mut current_batch_colored = false;
     let mut last_z = 0.0;
-    for extracted_tilemap in extracted_tilemaps.sprites.iter() {
-        let colored = extracted_tilemap.color != Color::WHITE;
+
+    for extracted_tilemap in extracted_tilemaps.tilemaps.iter() {
         if let Some(current_batch_handle) = &current_batch_handle {
-            if *current_batch_handle != extracted_tilemap.handle || current_batch_colored != colored
+            if *current_batch_handle != extracted_tilemap.handle
             {
-                if current_batch_colored {
-                    commands.spawn_bundle((TilemapBatch {
-                        range: colored_start..colored_end,
-                        handle: current_batch_handle.clone_weak(),
-                        z: last_z,
-                        colored: true,
-                    },));
-                    colored_start = colored_end;
-                } else {
-                    commands.spawn_bundle((TilemapBatch {
-                        range: start..end,
-                        handle: current_batch_handle.clone_weak(),
-                        z: last_z,
-                        colored: false,
-                    },));
-                    start = end;
-                }
+                commands.spawn_bundle((TilemapBatch {
+                    range: start..end,
+                    handle: current_batch_handle.clone_weak(),
+                    z: last_z,
+                    colored: true,
+                },));
             }
         }
         current_batch_handle = Some(extracted_tilemap.handle.clone_weak());
-        current_batch_colored = colored;
-        let tilemap_rect = extracted_tilemap.rect;
 
-        // Specify the corners of the sprite
-        let mut bottom_left = Vec2::new(tilemap_rect.min.x, tilemap_rect.max.y);
-        let mut top_left = tilemap_rect.min;
-        let mut top_right = Vec2::new(tilemap_rect.max.x, tilemap_rect.min.y);
-        let mut bottom_right = tilemap_rect.max;
+        for tile in extracted_tilemap.tiles.iter() {
+            let tilemap_rect = tile.rect;
 
-        if extracted_tilemap.flip_x {
-            bottom_left.x = tilemap_rect.max.x;
-            top_left.x = tilemap_rect.max.x;
-            bottom_right.x = tilemap_rect.min.x;
-            top_right.x = tilemap_rect.min.x;
-        }
+            // Specify the corners of the sprite
+            let mut bottom_left = Vec2::new(tilemap_rect.min.x, tilemap_rect.max.y);
+            let mut top_left = tilemap_rect.min;
+            let mut top_right = Vec2::new(tilemap_rect.max.x, tilemap_rect.min.y);
+            let mut bottom_right = tilemap_rect.max;
 
-        if extracted_tilemap.flip_y {
-            bottom_left.y = tilemap_rect.min.y;
-            bottom_right.y = tilemap_rect.min.y;
-            top_left.y = tilemap_rect.max.y;
-            top_right.y = tilemap_rect.max.y;
-        }
+            if tile.flags.contains(TileFlags::FLIP_X) {
+                bottom_left.x = tilemap_rect.max.x;
+                top_left.x = tilemap_rect.max.x;
+                bottom_right.x = tilemap_rect.min.x;
+                top_right.x = tilemap_rect.min.x;
+            }
 
-        let atlas_extent = extracted_tilemap.atlas_size.unwrap_or(tilemap_rect.max);
-        bottom_left /= atlas_extent;
-        bottom_right /= atlas_extent;
-        top_left /= atlas_extent;
-        top_right /= atlas_extent;
+            if tile.flags.contains(TileFlags::FLIP_Y) {
+                bottom_left.y = tilemap_rect.min.y;
+                bottom_right.y = tilemap_rect.min.y;
+                top_left.y = tilemap_rect.max.y;
+                top_right.y = tilemap_rect.max.y;
+            }
 
-        let uvs: [[f32; 2]; 6] = [
-            bottom_left.into(),
-            top_right.into(),
-            top_left.into(),
-            bottom_left.into(),
-            bottom_right.into(),
-            top_right.into(),
-        ];
+            let atlas_extent = extracted_tilemap.atlas_size;
+            bottom_left /= atlas_extent;
+            bottom_right /= atlas_extent;
+            top_left /= atlas_extent;
+            top_right /= atlas_extent;
 
-        let rect_size = extracted_tilemap.rect.size().extend(1.0);
-        if current_batch_colored {
-            let color = extracted_tilemap.color.as_linear_rgba_f32();
+            let uvs: [[f32; 2]; 6] = [
+                bottom_left.into(),
+                top_right.into(),
+                top_left.into(),
+                bottom_left.into(),
+                bottom_right.into(),
+                top_right.into(),
+            ];
+
+            let rect_size = tile.rect.size().extend(1.0);
+            let color = tile.color.as_linear_rgba_f32();
+
+            let tile_transform = extracted_tilemap.transform * tile.pos.as_vec2().extend(1.0).extend(1.0);
+
             // encode color as a single u32 to save space
             let color = (color[0] * 255.0) as u32
                 | ((color[1] * 255.0) as u32) << 8
@@ -417,30 +396,18 @@ pub fn prepare_tilemaps(
                 | ((color[3] * 255.0) as u32) << 24;
             for (index, vertex_position) in QUAD_VERTEX_POSITIONS.iter().enumerate() {
                 let mut final_position = *vertex_position * rect_size;
-                final_position = (extracted_tilemap.transform * final_position.extend(1.0)).xyz();
+                final_position = (tile_transform * final_position.extend(1.0)).xyz();
                 tilemap_meta.colored_vertices.push(ColoredTilemapVertex {
                     position: final_position.into(),
                     uv: uvs[index],
                     color,
                 });
             }
-        } else {
-            for (index, vertex_position) in QUAD_VERTEX_POSITIONS.iter().enumerate() {
-                let mut final_position = *vertex_position * rect_size;
-                final_position = (extracted_tilemap.transform * final_position.extend(1.0)).xyz();
-                tilemap_meta.vertices.push(TilemapVertex {
-                    position: final_position.into(),
-                    uv: uvs[index],
-                });
-            }
-        }
 
-        last_z = extracted_tilemap.transform.w_axis[2];
-        if current_batch_colored {
-            colored_end += QUAD_VERTEX_POSITIONS.len() as u32;
-        } else {
+            last_z = extracted_tilemap.transform.w_axis[2];
             end += QUAD_VERTEX_POSITIONS.len() as u32;
         }
+
     }
 
     // if start != end, there is one last batch to process
@@ -448,15 +415,6 @@ pub fn prepare_tilemaps(
         if let Some(current_batch_handle) = current_batch_handle {
             commands.spawn_bundle((TilemapBatch {
                 range: start..end,
-                handle: current_batch_handle,
-                colored: false,
-                z: last_z,
-            },));
-        }
-    } else if colored_start != colored_end {
-        if let Some(current_batch_handle) = current_batch_handle {
-            commands.spawn_bundle((TilemapBatch {
-                range: colored_start..colored_end,
                 handle: current_batch_handle,
                 colored: true,
                 z: last_z,

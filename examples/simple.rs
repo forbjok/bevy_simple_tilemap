@@ -102,16 +102,9 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atl
         ..Default::default()
     };
 
-    let ph_tilemap = bevy_simple_tilemap::TextureAtlasTilemap {
-        color: Color::WHITE,
-        flip_x: false,
-        flip_y: false,
-        index: 1,
-    };
-
     // Spawn camera
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 
     // Spawn tilemap
-    commands.spawn_bundle(tilemap_bundle).insert(ph_tilemap);
+    commands.spawn_bundle(tilemap_bundle);
 }

@@ -275,6 +275,7 @@ struct ColoredTilemapVertex {
     pub color: u32,
 }
 
+/// Probably a cache of GPU data to be used in shaders?
 pub struct TilemapMeta {
     vertices: BufferVec<TilemapVertex>,
     colored_vertices: BufferVec<ColoredTilemapVertex>,
@@ -386,17 +387,19 @@ pub fn prepare_tilemaps(
 
             let rect_size = tile.rect.size().extend(1.0);
             let color = tile.color.as_linear_rgba_f32();
-
-            let tile_transform = extracted_tilemap.transform * tile.pos.as_vec2().extend(1.0).extend(1.0);
+            let tile_pos = tile.pos.as_vec2().extend(1.0) * rect_size;
 
             // encode color as a single u32 to save space
             let color = (color[0] * 255.0) as u32
                 | ((color[1] * 255.0) as u32) << 8
                 | ((color[2] * 255.0) as u32) << 16
                 | ((color[3] * 255.0) as u32) << 24;
+
             for (index, vertex_position) in QUAD_VERTEX_POSITIONS.iter().enumerate() {
-                let mut final_position = *vertex_position * rect_size;
-                final_position = (tile_transform * final_position.extend(1.0)).xyz();
+                let mut final_position = tile_pos + (*vertex_position * rect_size);
+
+                final_position = (extracted_tilemap.transform * final_position.extend(1.0)).xyz();
+
                 tilemap_meta.colored_vertices.push(ColoredTilemapVertex {
                     position: final_position.into(),
                     uv: uvs[index],

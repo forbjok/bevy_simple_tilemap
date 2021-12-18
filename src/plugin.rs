@@ -51,12 +51,12 @@ impl Plugin for SimpleTileMapPlugin {
             .add_system_to_stage(RenderStage::Prepare, crate::render::prepare_tilemaps)
             .add_system_to_stage(RenderStage::Queue, crate::render::queue_tilemaps);
 
-        let draw_sprite = DrawTilemap::new(&mut render_app.world);
+        let draw_tilemap = DrawTilemap::new(&mut render_app.world);
         render_app
             .world
             .get_resource::<DrawFunctions<Transparent2d>>()
             .unwrap()
             .write()
-            .add(draw_sprite);
+            .add(draw_tilemap);
     }
 }

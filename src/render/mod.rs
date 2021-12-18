@@ -89,16 +89,14 @@ impl FromWorld for TilemapPipeline {
 }
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
-pub struct TilemapPipelineKey {
-    colored: bool,
-}
+pub struct TilemapPipelineKey;
 
 impl SpecializedPipeline for TilemapPipeline {
     type Key = TilemapPipelineKey;
 
     fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
-        let mut vertex_buffer_layout = VertexBufferLayout {
-            array_stride: 20,
+        let vertex_buffer_layout = VertexBufferLayout {
+            array_stride: 24,
             step_mode: VertexStepMode::Vertex,
             attributes: vec![
                 VertexAttribute {
@@ -111,18 +109,16 @@ impl SpecializedPipeline for TilemapPipeline {
                     offset: 12,
                     shader_location: 1,
                 },
+                // Color
+                VertexAttribute {
+                    format: VertexFormat::Uint32,
+                    offset: 20,
+                    shader_location: 2,
+                },
             ],
         };
-        let mut shader_defs = Vec::new();
-        if key.colored {
-            shader_defs.push("COLORED".to_string());
-            vertex_buffer_layout.attributes.push(VertexAttribute {
-                format: VertexFormat::Uint32,
-                offset: 20,
-                shader_location: 2,
-            });
-            vertex_buffer_layout.array_stride += 4;
-        }
+
+        let shader_defs = Vec::new();
 
         RenderPipelineDescriptor {
             vertex: VertexState {
@@ -265,20 +261,12 @@ pub fn extract_tilemaps(
 struct TilemapVertex {
     pub position: [f32; 3],
     pub uv: [f32; 2],
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Pod, Zeroable)]
-struct ColoredTilemapVertex {
-    pub position: [f32; 3],
-    pub uv: [f32; 2],
     pub color: u32,
 }
 
 /// Probably a cache of GPU data to be used in shaders?
 pub struct TilemapMeta {
     vertices: BufferVec<TilemapVertex>,
-    colored_vertices: BufferVec<ColoredTilemapVertex>,
     view_bind_group: Option<BindGroup>,
 }
 
@@ -286,7 +274,6 @@ impl Default for TilemapMeta {
     fn default() -> Self {
         Self {
             vertices: BufferVec::new(BufferUsages::VERTEX),
-            colored_vertices: BufferVec::new(BufferUsages::VERTEX),
             view_bind_group: None,
         }
     }
@@ -306,7 +293,6 @@ pub struct TilemapBatch {
     range: Range<u32>,
     handle: Handle<Image>,
     z: f32,
-    colored: bool,
 }
 
 pub fn prepare_tilemaps(
@@ -317,7 +303,6 @@ pub fn prepare_tilemaps(
     mut extracted_tilemaps: ResMut<ExtractedTilemaps>,
 ) {
     tilemap_meta.vertices.clear();
-    tilemap_meta.colored_vertices.clear();
 
     // sort first by z and then by handle. this ensures that, when possible, batches span multiple z layers
     // batches won't span z-layers if there is another batch between them
@@ -341,7 +326,6 @@ pub fn prepare_tilemaps(
                     range: start..end,
                     handle: current_batch_handle.clone_weak(),
                     z: last_z,
-                    colored: true,
                 },));
             }
         }
@@ -400,7 +384,7 @@ pub fn prepare_tilemaps(
 
                 final_position = (extracted_tilemap.transform * final_position.extend(1.0)).xyz();
 
-                tilemap_meta.colored_vertices.push(ColoredTilemapVertex {
+                tilemap_meta.vertices.push(TilemapVertex {
                     position: final_position.into(),
                     uv: uvs[index],
                     color,
@@ -419,7 +403,6 @@ pub fn prepare_tilemaps(
             commands.spawn_bundle((TilemapBatch {
                 range: start..end,
                 handle: current_batch_handle,
-                colored: true,
                 z: last_z,
             },));
         }
@@ -427,9 +410,6 @@ pub fn prepare_tilemaps(
 
     tilemap_meta
         .vertices
-        .write_buffer(&render_device, &render_queue);
-    tilemap_meta
-        .colored_vertices
         .write_buffer(&render_device, &render_queue);
 }
 
@@ -475,13 +455,9 @@ pub fn queue_tilemaps(
         let pipeline = pipelines.specialize(
             &mut pipeline_cache,
             &tilemap_pipeline,
-            TilemapPipelineKey { colored: false },
+            TilemapPipelineKey,
         );
-        let colored_pipeline = pipelines.specialize(
-            &mut pipeline_cache,
-            &tilemap_pipeline,
-            TilemapPipelineKey { colored: true },
-        );
+
         for mut transparent_phase in views.iter_mut() {
             for (entity, batch) in tilemap_batches.iter_mut() {
                 image_bind_groups
@@ -506,11 +482,7 @@ pub fn queue_tilemaps(
                     });
                 transparent_phase.add(Transparent2d {
                     draw_function: draw_tilemap_function,
-                    pipeline: if batch.colored {
-                        colored_pipeline
-                    } else {
-                        pipeline
-                    },
+                    pipeline,
                     entity,
                     sort_key: FloatOrd(batch.z),
                 });
@@ -552,11 +524,7 @@ impl Draw<Transparent2d> for DrawTilemap {
         let tilemap_batch = sprites.get(item.entity).unwrap();
         if let Some(pipeline) = pipelines.into_inner().get(item.pipeline) {
             pass.set_render_pipeline(pipeline);
-            if tilemap_batch.colored {
-                pass.set_vertex_buffer(0, tilemap_meta.colored_vertices.buffer().unwrap().slice(..));
-            } else {
-                pass.set_vertex_buffer(0, tilemap_meta.vertices.buffer().unwrap().slice(..));
-            }
+            pass.set_vertex_buffer(0, tilemap_meta.vertices.buffer().unwrap().slice(..));
             pass.set_bind_group(
                 0,
                 tilemap_meta.view_bind_group.as_ref().unwrap(),

@@ -177,13 +177,12 @@ pub fn row_major_pos(index: usize) -> IVec2 {
 
 /// Update and mark chunks for remeshing, based on queued tile changes
 pub(crate) fn update_chunks_system(
-    mut commands: Commands,
-    mut tilemap_query: Query<(Entity, &mut TileMap, &mut TileMapCache, &Handle<TextureAtlas>)>,
+    mut tilemap_query: Query<(&mut TileMap, &mut TileMapCache, &Handle<TextureAtlas>)>,
     texture_atlases: Res<Assets<TextureAtlas>>,
 ) {
     //let update_chunk_time = Instant::now();
 
-    for (tilemap_entity, mut tilemap, mut tilemap_cache, texture_atlas_handle) in tilemap_query.iter_mut() {
+    for (mut tilemap, mut tilemap_cache, texture_atlas_handle) in tilemap_query.iter_mut() {
         // Temporary storage for tile changes grouped by chunk
         let changes_by_chunk = &mut tilemap_cache.tile_changes_by_chunk;
 

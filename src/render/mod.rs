@@ -94,7 +94,7 @@ pub struct TilemapPipelineKey;
 impl SpecializedPipeline for TilemapPipeline {
     type Key = TilemapPipelineKey;
 
-    fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
+    fn specialize(&self, _key: Self::Key) -> RenderPipelineDescriptor {
         let vertex_buffer_layout = VertexBufferLayout {
             array_stride: 24,
             step_mode: VertexStepMode::Vertex,
@@ -230,7 +230,7 @@ pub fn extract_tilemaps(
             if images.contains(&texture_atlas.texture) {
                 let mut tiles: Vec<ExtractedTile> = Vec::new();
 
-                for (pos, chunk) in tilemap.chunks.iter() {
+                for (_pos, chunk) in tilemap.chunks.iter() {
                     for (i, tile) in chunk.tiles.iter().enumerate() {
                         if let Some(tile) = tile {
                             let rect = texture_atlas.textures[tile.sprite_index as usize];
@@ -313,7 +313,7 @@ pub fn prepare_tilemaps(
         }
     });
 
-    let mut start = 0;
+    let start = 0;
     let mut end = 0;
     let mut current_batch_handle: Option<Handle<Image>> = None;
     let mut last_z = 0.0;

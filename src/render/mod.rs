@@ -25,7 +25,6 @@ use bevy::transform::components::GlobalTransform;
 use bevy::utils::HashMap;
 use bytemuck::{Pod, Zeroable};
 use crevice::std140::AsStd140;
-use wgpu::SamplerBindingType;
 
 use crate::{TileMap, TileFlags};
 use crate::tilemap::row_major_pos;

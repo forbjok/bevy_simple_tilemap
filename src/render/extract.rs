@@ -53,9 +53,11 @@ pub fn extract_tilemaps(
 
         if let Some(texture_atlas) = texture_atlases.get(texture_atlas_handle) {
             if images.contains(&texture_atlas.texture) {
-                let mut tiles: Vec<ExtractedTile> = Vec::new();
+                let mut chunks: Vec<ExtractedChunk> = Vec::with_capacity(tilemap.chunks.len());
 
                 for (_pos, chunk) in tilemap.chunks.iter() {
+                    let mut tiles: Vec<ExtractedTile> = Vec::with_capacity(chunk.tiles.len());
+
                     for (i, tile) in chunk.tiles.iter().enumerate() {
                         if let Some(tile) = tile {
                             let rect = texture_atlas.textures[tile.sprite_index as usize];
@@ -68,13 +70,18 @@ pub fn extract_tilemaps(
                             });
                         }
                     }
+
+                    chunks.push(ExtractedChunk {
+                        origin: chunk.origin,
+                        tiles,
+                    });
                 }
 
                 extracted_tilemaps.tilemaps.push(ExtractedTilemap {
                     transform: *transform,
                     image_handle_id: texture_atlas.texture.id,
                     atlas_size: texture_atlas.size,
-                    tiles,
+                    chunks,
                 });
             }
         }

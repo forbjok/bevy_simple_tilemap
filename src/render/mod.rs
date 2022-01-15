@@ -1,6 +1,6 @@
 use bevy::{
     asset::HandleId,
-    math::{IVec2, Vec2},
+    math::{IVec2, Vec2, IVec3},
     prelude::{AssetEvent, Color, Component, GlobalTransform, Handle, HandleUntyped, Image, Shader},
     reflect::TypeUuid,
     render::render_resource::{BindGroup, BufferUsages, BufferVec},
@@ -25,11 +25,16 @@ pub struct ExtractedTile {
     pub flags: TileFlags,
 }
 
+pub struct ExtractedChunk {
+    pub origin: IVec3,
+    pub tiles: Vec<ExtractedTile>,
+}
+
 pub struct ExtractedTilemap {
     pub transform: GlobalTransform,
     pub image_handle_id: HandleId,
     pub atlas_size: Vec2,
-    pub tiles: Vec<ExtractedTile>,
+    pub chunks: Vec<ExtractedChunk>,
 }
 
 #[derive(Default)]

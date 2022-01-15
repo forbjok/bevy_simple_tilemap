@@ -143,63 +143,65 @@ pub fn queue_tilemaps(
                     continue;
                 }
 
-                for tile in tilemap.tiles.iter() {
-                    // Calculate vertex data for this item
+                for chunk in tilemap.chunks.iter() {
+                    for tile in chunk.tiles.iter() {
+                        // Calculate vertex data for this item
 
-                    let mut uvs = QUAD_UVS;
+                        let mut uvs = QUAD_UVS;
 
-                    if tile.flags.contains(TileFlags::FLIP_X) {
-                        uvs = [uvs[1], uvs[0], uvs[3], uvs[2]];
-                    }
+                        if tile.flags.contains(TileFlags::FLIP_X) {
+                            uvs = [uvs[1], uvs[0], uvs[3], uvs[2]];
+                        }
 
-                    if tile.flags.contains(TileFlags::FLIP_Y) {
-                        uvs = [uvs[3], uvs[2], uvs[1], uvs[0]];
-                    }
+                        if tile.flags.contains(TileFlags::FLIP_Y) {
+                            uvs = [uvs[3], uvs[2], uvs[1], uvs[0]];
+                        }
 
-                    // By default, the size of the quad is the size of the texture
-                    //let mut quad_size = image_size;
+                        // By default, the size of the quad is the size of the texture
+                        //let mut quad_size = image_size;
 
-                    // If a rect is specified, adjust UVs and the size of the quad
-                    let rect = tile.rect;
-                    let rect_size = rect.size();
-                    for uv in &mut uvs {
-                        *uv = (rect.min + *uv * rect_size) / image_size;
-                    }
+                        // If a rect is specified, adjust UVs and the size of the quad
+                        let rect = tile.rect;
+                        let rect_size = rect.size();
+                        for uv in &mut uvs {
+                            *uv = (rect.min + *uv * rect_size) / image_size;
+                        }
 
-                    let quad_size = rect_size;
+                        let quad_size = rect_size;
 
-                    // Override the size if a custom one is specified
-                    //if let Some(custom_size) = extracted_sprite.custom_size {
-                    //    quad_size = custom_size;
-                    //}
+                        // Override the size if a custom one is specified
+                        //if let Some(custom_size) = extracted_sprite.custom_size {
+                        //    quad_size = custom_size;
+                        //}
 
-                    let tile_pos = tile.pos.as_vec2() * quad_size; // TODO: Make work
+                        let tile_pos = tile.pos.as_vec2() * quad_size; // TODO: Make work
 
-                    // Apply size and global transform
-                    let positions = QUAD_VERTEX_POSITIONS.map(|quad_pos| {
-                        tilemap
-                            .transform
-                            .mul_vec3((tile_pos + (quad_pos * quad_size)).extend(0.))
-                            .into()
-                    });
-
-                    // Store the vertex data and add the item to the render phase
-                    let color = tile.color.as_linear_rgba_f32();
-                    // encode color as a single u32 to save space
-                    let color = (color[0] * 255.0) as u32
-                        | ((color[1] * 255.0) as u32) << 8
-                        | ((color[2] * 255.0) as u32) << 16
-                        | ((color[3] * 255.0) as u32) << 24;
-
-                    for i in QUAD_INDICES.iter() {
-                        sprite_meta.vertices.push(TilemapVertex {
-                            position: positions[*i],
-                            uv: uvs[*i].into(),
-                            color,
+                        // Apply size and global transform
+                        let positions = QUAD_VERTEX_POSITIONS.map(|quad_pos| {
+                            tilemap
+                                .transform
+                                .mul_vec3((tile_pos + (quad_pos * quad_size)).extend(0.))
+                                .into()
                         });
-                    }
 
-                    index += QUAD_INDICES.len() as u32;
+                        // Store the vertex data and add the item to the render phase
+                        let color = tile.color.as_linear_rgba_f32();
+                        // encode color as a single u32 to save space
+                        let color = (color[0] * 255.0) as u32
+                            | ((color[1] * 255.0) as u32) << 8
+                            | ((color[2] * 255.0) as u32) << 16
+                            | ((color[3] * 255.0) as u32) << 24;
+
+                        for i in QUAD_INDICES.iter() {
+                            sprite_meta.vertices.push(TilemapVertex {
+                                position: positions[*i],
+                                uv: uvs[*i].into(),
+                                color,
+                            });
+                        }
+
+                        index += QUAD_INDICES.len() as u32;
+                    }
                 }
 
                 let item_end = index;

@@ -10,11 +10,10 @@ repository = "https://github.com/forbjok/bevy_simple_tilemap.git"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { git = "https://github.com/bevyengine/bevy.git", branch = "main" }
-bevy_derive = { git = "https://github.com/bevyengine/bevy.git", branch = "main" }
+bevy = "0.6.0"
+bevy_derive = "0.6.0"
 bitflags = "1.3.2"
-bytemuck = "1.7.2"
-crevice = { git = "https://github.com/bevyengine/bevy.git", branch = "main" }
+bytemuck = "1.7.3"
 
 [[example]]
 name = "benchmark"

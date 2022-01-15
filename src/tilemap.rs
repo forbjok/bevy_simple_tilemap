@@ -1,16 +1,7 @@
 use bitflags::bitflags;
-use std::sync::Mutex;
 
 use bevy::{
-    core::{Pod, Zeroable},
     prelude::*,
-    reflect::TypeUuid,
-    render::{
-        camera::{ActiveCameras, Camera},
-        mesh::Indices,
-        render_resource::PrimitiveTopology,
-    },
-    tasks::AsyncComputeTaskPool,
     utils::{HashMap, HashSet},
 };
 
@@ -27,21 +18,6 @@ pub struct Chunk {
     pub origin: IVec3,
     pub tiles: Vec<Option<Tile>>,
     pub needs_remesh: bool,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, Pod, Zeroable)]
-pub struct TileGpuData {
-    pub sprite_index: u32,
-    pub flags: u32,
-    pad: [u32; 2],
-    pub color: Vec4,
-}
-
-#[derive(Debug, Default, TypeUuid)]
-#[uuid = "54d394ec-459c-48d3-9562-35fce6e88bda"]
-pub struct ChunkGpuData {
-    pub tiles: Vec<TileGpuData>,
 }
 
 bitflags! {
@@ -131,17 +107,6 @@ impl TileMap {
     }
 }
 
-impl From<&Tile> for TileGpuData {
-    fn from(tile: &Tile) -> Self {
-        Self {
-            sprite_index: tile.sprite_index,
-            flags: tile.flags.bits(),
-            pad: Default::default(),
-            color: tile.color.into(),
-        }
-    }
-}
-
 /// Calculate chunk position based on tile position
 #[inline]
 fn calc_chunk_pos(tile_pos: IVec3) -> IVec3 {
@@ -178,12 +143,11 @@ pub fn row_major_pos(index: usize) -> IVec2 {
 
 /// Update and mark chunks for remeshing, based on queued tile changes
 pub(crate) fn update_chunks_system(
-    mut tilemap_query: Query<(&mut TileMap, &mut TileMapCache, &Handle<TextureAtlas>)>,
-    texture_atlases: Res<Assets<TextureAtlas>>,
+    mut tilemap_query: Query<(&mut TileMap, &mut TileMapCache)>,
 ) {
     //let update_chunk_time = Instant::now();
 
-    for (mut tilemap, mut tilemap_cache, texture_atlas_handle) in tilemap_query.iter_mut() {
+    for (mut tilemap, mut tilemap_cache) in tilemap_query.iter_mut() {
         // Temporary storage for tile changes grouped by chunk
         let changes_by_chunk = &mut tilemap_cache.tile_changes_by_chunk;
 
@@ -240,12 +204,6 @@ pub(crate) fn update_chunks_system(
 
                 // Set tiles in chunk
                 chunk.set_tiles(tiles.drain(..));
-
-                // Determine tile size in pixels from first sprite in TextureAtlas.
-                // It is assumed and mandated that all sprites in the sprite sheet are the same size.
-                let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
-                let tile0_tex = texture_atlas.textures.get(0).unwrap();
-                let tile_size = Vec2::new(tile0_tex.width(), tile0_tex.height());
 
                 // Store chunk entity in the tilemap
                 tilemap.chunks.insert(*chunk_pos, chunk);

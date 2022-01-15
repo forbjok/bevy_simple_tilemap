@@ -94,7 +94,7 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<u32>) {
         tilemap.set_tiles(tiles);
     }
 
-    dbg!(upd_tiles.elapsed());
+    //dbg!(upd_tiles.elapsed());
 }
 
 fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atlases: ResMut<Assets<TextureAtlas>>) {

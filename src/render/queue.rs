@@ -5,7 +5,7 @@ use bevy::core::FloatOrd;
 use bevy::core_pipeline::Transparent2d;
 use bevy::ecs::prelude::*;
 use bevy::math::{const_vec2, Vec2};
-use bevy::prelude::Msaa;
+use bevy::prelude::{Msaa, info};
 use bevy::render::{
     render_asset::RenderAssets,
     render_phase::{DrawFunctions, RenderPhase},
@@ -14,6 +14,7 @@ use bevy::render::{
     texture::Image,
     view::ViewUniforms,
 };
+use bevy::utils::Instant;
 
 use crate::TileFlags;
 
@@ -55,6 +56,8 @@ pub fn queue_tilemaps(
     mut views: Query<&mut RenderPhase<Transparent2d>>,
     events: Res<TilemapAssetEvents>,
 ) {
+    let timer = Instant::now();
+
     // If an image has changed, the GpuImage has (probably) changed
     for event in &events.images {
         match event {
@@ -108,6 +111,8 @@ pub fn queue_tilemaps(
 
                 let image_size;
                 let batch_entity;
+
+                let item_start = index;
 
                 // Set-up a new possible batch
                 if let Some(gpu_image) = gpu_images.get(&Handle::weak(batch.image_handle_id)) {
@@ -193,23 +198,25 @@ pub fn queue_tilemaps(
                         });
                     }
 
-                    let item_start = index;
                     index += QUAD_INDICES.len() as u32;
-                    let item_end = index;
-
-                    // These items will be sorted by depth with other phase items
-                    let sort_key = FloatOrd(tilemap.transform.translation.z);
-
-                    transparent_phase.add(Transparent2d {
-                        draw_function: draw_tilemap_function,
-                        pipeline,
-                        entity: batch_entity,
-                        sort_key,
-                        batch_range: Some(item_start..item_end),
-                    });
                 }
+
+                let item_end = index;
+
+                // These items will be sorted by depth with other phase items
+                let sort_key = FloatOrd(tilemap.transform.translation.z);
+
+                transparent_phase.add(Transparent2d {
+                    draw_function: draw_tilemap_function,
+                    pipeline,
+                    entity: batch_entity,
+                    sort_key,
+                    batch_range: Some(item_start..item_end),
+                });
             }
         }
         sprite_meta.vertices.write_buffer(&render_device, &render_queue);
     }
+
+    info!("QUEUE {:?}", timer.elapsed());
 }

@@ -2,10 +2,12 @@ use super::*;
 use bevy::asset::Handle;
 use bevy::ecs::system::SystemParamItem;
 use bevy::ecs::{prelude::*, system::lifetimeless::*};
+use bevy::prelude::info;
 use bevy::render::render_phase::{
     BatchedPhaseItem, EntityRenderCommand, RenderCommand, RenderCommandResult, SetItemPipeline,
 };
 use bevy::render::{render_phase::TrackedRenderPass, view::ViewUniformOffset};
+use bevy::utils::Instant;
 
 pub type DrawTilemap = (
     SetItemPipeline,
@@ -24,12 +26,16 @@ impl<const I: usize> EntityRenderCommand for SetTilemapViewBindGroup<I> {
         (sprite_meta, view_query): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
+        let timer = Instant::now();
+
         let view_uniform = view_query.get(view).unwrap();
         pass.set_bind_group(
             I,
             sprite_meta.into_inner().view_bind_group.as_ref().unwrap(),
             &[view_uniform.offset],
         );
+
+        info!("SetTilemapViewBindGroup {:?}", timer.elapsed());
         RenderCommandResult::Success
     }
 }
@@ -43,6 +49,8 @@ impl<const I: usize> EntityRenderCommand for SetTilemapTextureBindGroup<I> {
         (image_bind_groups, query_batch): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
+        let timer = Instant::now();
+
         let tilemap_batch = query_batch.get(item).unwrap();
         let image_bind_groups = image_bind_groups.into_inner();
 
@@ -54,6 +62,8 @@ impl<const I: usize> EntityRenderCommand for SetTilemapTextureBindGroup<I> {
                 .unwrap(),
             &[],
         );
+
+        info!("SetTilemapTextureBindGroup {:?}", timer.elapsed());
         RenderCommandResult::Success
     }
 }
@@ -68,12 +78,16 @@ impl<P: BatchedPhaseItem> RenderCommand<P> for DrawTilemapBatch {
         (tilemap_meta, _query_batch): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
+        let timer = Instant::now();
+
         //let tilemap_batch = query_batch.get(item.entity()).unwrap();
         let tilemap_meta = tilemap_meta.into_inner();
 
         pass.set_vertex_buffer(0, tilemap_meta.vertices.buffer().unwrap().slice(..));
 
         pass.draw(item.batch_range().as_ref().unwrap().clone(), 0..1);
+
+        info!("DRAW {:?}", timer.elapsed());
         RenderCommandResult::Success
     }
 }

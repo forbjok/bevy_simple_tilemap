@@ -68,12 +68,12 @@ pub fn queue_tilemaps(
     }
 
     if let Some(view_binding) = view_uniforms.uniforms.binding() {
-        let sprite_meta = &mut tilemap_meta;
+        let tilemap_meta = &mut tilemap_meta;
 
         // Clear the vertex buffers
-        sprite_meta.vertices.clear();
+        tilemap_meta.vertices.clear();
 
-        sprite_meta.view_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
+        tilemap_meta.view_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
             entries: &[BindGroupEntry {
                 binding: 0,
                 resource: view_binding,
@@ -96,7 +96,7 @@ pub fn queue_tilemaps(
 
             transparent_phase.items.reserve(tilemaps.len());
 
-            // Sort sprites by z for correct transparency and then by handle to improve batching
+            // Sort tilemaps by z for correct transparency and then by handle to improve batching
             tilemaps.sort_unstable_by(
                 |a, b| match a.transform.translation.z.partial_cmp(&b.transform.translation.z) {
                     Some(Ordering::Equal) | None => a.image_handle_id.cmp(&b.image_handle_id),
@@ -134,7 +134,7 @@ pub fn queue_tilemaps(
                                         resource: BindingResource::Sampler(&gpu_image.sampler),
                                     },
                                 ],
-                                label: Some("sprite_material_bind_group"),
+                                label: Some("tilemap_material_bind_group"),
                                 layout: &tilemap_pipeline.material_layout,
                             })
                         });
@@ -193,7 +193,7 @@ pub fn queue_tilemaps(
                             | ((color[3] * 255.0) as u32) << 24;
 
                         for i in QUAD_INDICES.iter() {
-                            sprite_meta.vertices.push(TilemapVertex {
+                            tilemap_meta.vertices.push(TilemapVertex {
                                 position: positions[*i],
                                 uv: uvs[*i].into(),
                                 color,
@@ -218,7 +218,8 @@ pub fn queue_tilemaps(
                 });
             }
         }
-        sprite_meta.vertices.write_buffer(&render_device, &render_queue);
+
+        tilemap_meta.vertices.write_buffer(&render_device, &render_queue);
     }
 
     info!("QUEUE {:?}", timer.elapsed());

@@ -42,7 +42,7 @@ pub fn extract_tilemaps(
     texture_atlases: Res<Assets<TextureAtlas>>,
     tilemap_query: Query<(&ComputedVisibility, &TileMap, &GlobalTransform, &Handle<TextureAtlas>)>,
 ) {
-    let timer = Instant::now();
+    //let timer = Instant::now();
 
     let mut extracted_tilemaps = render_world.get_resource_mut::<ExtractedTilemaps>().unwrap();
     extracted_tilemaps.tilemaps.clear();
@@ -86,5 +86,5 @@ pub fn extract_tilemaps(
             }
         }
     }
-    info!("EXT TILEMAP {:?}", timer.elapsed());
+    //info!("EXT TILEMAP {:?}", timer.elapsed());
 }

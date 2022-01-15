@@ -23,7 +23,7 @@ impl<const I: usize> EntityRenderCommand for SetTilemapViewBindGroup<I> {
     fn render<'w>(
         view: Entity,
         _item: Entity,
-        (sprite_meta, view_query): SystemParamItem<'w, '_, Self::Param>,
+        (tilemap_meta, view_query): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         //let timer = Instant::now();
@@ -31,7 +31,7 @@ impl<const I: usize> EntityRenderCommand for SetTilemapViewBindGroup<I> {
         let view_uniform = view_query.get(view).unwrap();
         pass.set_bind_group(
             I,
-            sprite_meta.into_inner().view_bind_group.as_ref().unwrap(),
+            tilemap_meta.into_inner().view_bind_group.as_ref().unwrap(),
             &[view_uniform.offset],
         );
 

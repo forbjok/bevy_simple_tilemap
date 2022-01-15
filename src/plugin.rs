@@ -1,6 +1,17 @@
-use bevy::{prelude::*, render::{render_resource::{Shader, SpecializedPipelines}, RenderStage, render_phase::AddRenderCommand, RenderApp}, core_pipeline::Transparent2d};
+use bevy::{
+    core_pipeline::Transparent2d,
+    prelude::*,
+    render::{
+        render_phase::AddRenderCommand,
+        render_resource::{Shader, SpecializedPipelines},
+        RenderApp, RenderStage,
+    },
+};
 
-use crate::{render::{TilemapPipeline, ImageBindGroups, ExtractedTilemaps, TilemapMeta, DrawTilemap, TilemapAssetEvents, TILEMAP_SHADER_HANDLE, self}};
+use crate::render::{
+    self, DrawTilemap, ExtractedTilemaps, ImageBindGroups, TilemapAssetEvents, TilemapMeta, TilemapPipeline,
+    TILEMAP_SHADER_HANDLE,
+};
 
 #[derive(Default)]
 pub struct SimpleTileMapPlugin;
@@ -17,8 +28,7 @@ pub enum TilemapSystem {
 
 impl Plugin for SimpleTileMapPlugin {
     fn build(&self, app: &mut App) {
-        app
-        .add_stage_before(
+        app.add_stage_before(
             CoreStage::PostUpdate,
             SimpleTileMapStage::Update,
             SystemStage::parallel(),

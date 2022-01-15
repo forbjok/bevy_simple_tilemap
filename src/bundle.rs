@@ -1,10 +1,6 @@
-use bevy::{
-    prelude::*,
-};
+use bevy::prelude::*;
 
-use crate::{
-    tilemap::{TileMap, TileMapCache},
-};
+use crate::tilemap::{TileMap, TileMapCache};
 
 #[derive(Bundle)]
 pub struct TileMapBundle {

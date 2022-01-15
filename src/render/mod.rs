@@ -1,38 +1,36 @@
-use std::{cmp::Ordering, ops::Range};
+use std::cmp::Ordering;
 
-use bevy::ecs::system::SystemParamItem;
-use bevy::prelude::{HandleUntyped, Msaa};
-use bevy::reflect::{TypeUuid, Uuid};
-use bevy::render::render_phase::{BatchedPhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, EntityRenderCommand};
-use bevy::render::render_resource::std140::AsStd140;
-use bevy::sprite::{Rect, TextureAtlas, SpritePipelineKey};
 use bevy::asset::{AssetEvent, Assets, Handle, HandleId};
 use bevy::core::FloatOrd;
 use bevy::core_pipeline::Transparent2d;
-use bevy::ecs::{
-    prelude::*,
-    system::{lifetimeless::*, SystemState},
+use bevy::ecs::system::SystemParamItem;
+use bevy::ecs::{prelude::*, system::lifetimeless::*};
+use bevy::math::{const_vec2, IVec2, Vec2};
+use bevy::prelude::{HandleUntyped, Msaa};
+use bevy::reflect::TypeUuid;
+use bevy::render::render_phase::{
+    BatchedPhaseItem, EntityRenderCommand, RenderCommand, RenderCommandResult, SetItemPipeline,
 };
-use bevy::math::{const_vec3, Mat4, Vec2, Vec3, Vec4Swizzles, IVec2, const_vec2};
+use bevy::render::render_resource::std140::AsStd140;
 use bevy::render::{
     color::Color,
     render_asset::RenderAssets,
-    render_phase::{Draw, DrawFunctions, RenderPhase, TrackedRenderPass},
+    render_phase::{DrawFunctions, RenderPhase, TrackedRenderPass},
     render_resource::*,
     renderer::{RenderDevice, RenderQueue},
     texture::{BevyDefault, Image},
     view::{ComputedVisibility, ViewUniform, ViewUniformOffset, ViewUniforms},
     RenderWorld,
 };
+use bevy::sprite::{Rect, TextureAtlas};
 use bevy::transform::components::GlobalTransform;
 use bevy::utils::HashMap;
 use bytemuck::{Pod, Zeroable};
 
-use crate::{TileMap, TileFlags};
 use crate::tilemap::row_major_pos;
+use crate::{TileFlags, TileMap};
 
-pub const TILEMAP_SHADER_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 9765236402292098257);
+pub const TILEMAP_SHADER_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 9765236402292098257);
 
 pub struct TilemapPipeline {
     view_layout: BindGroupLayout,
@@ -112,10 +110,10 @@ impl TilemapPipelineKey {
 }
 
 impl SpecializedPipeline for TilemapPipeline {
-    type Key = SpritePipelineKey;
+    type Key = TilemapPipelineKey;
 
     fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
-        let mut vertex_buffer_layout = VertexBufferLayout {
+        let vertex_buffer_layout = VertexBufferLayout {
             array_stride: 24,
             step_mode: VertexStepMode::Vertex,
             attributes: vec![
@@ -137,7 +135,7 @@ impl SpecializedPipeline for TilemapPipeline {
             ],
         };
 
-        let mut shader_defs = Vec::new();
+        let shader_defs = Vec::new();
 
         RenderPipelineDescriptor {
             vertex: VertexState {
@@ -201,13 +199,8 @@ pub struct TilemapAssetEvents {
     pub images: Vec<AssetEvent<Image>>,
 }
 
-pub fn extract_tilemap_events(
-    mut render_world: ResMut<RenderWorld>,
-    mut image_events: EventReader<AssetEvent<Image>>,
-) {
-    let mut events = render_world
-        .get_resource_mut::<TilemapAssetEvents>()
-        .unwrap();
+pub fn extract_tilemap_events(mut render_world: ResMut<RenderWorld>, mut image_events: EventReader<AssetEvent<Image>>) {
+    let mut events = render_world.get_resource_mut::<TilemapAssetEvents>().unwrap();
     let TilemapAssetEvents { ref mut images } = *events;
     images.clear();
 
@@ -231,12 +224,7 @@ pub fn extract_tilemaps(
     mut render_world: ResMut<RenderWorld>,
     images: Res<Assets<Image>>,
     texture_atlases: Res<Assets<TextureAtlas>>,
-    tilemap_query: Query<(
-        &ComputedVisibility,
-        &TileMap,
-        &GlobalTransform,
-        &Handle<TextureAtlas>,
-    )>,
+    tilemap_query: Query<(&ComputedVisibility, &TileMap, &GlobalTransform, &Handle<TextureAtlas>)>,
 ) {
     let mut extracted_tilemaps = render_world.get_resource_mut::<ExtractedTilemaps>().unwrap();
     extracted_tilemaps.tilemaps.clear();
@@ -282,7 +270,6 @@ struct TilemapVertex {
     pub uv: [f32; 2],
     pub color: u32,
 }
-
 
 /// Probably a cache of GPU data to be used in shaders?
 pub struct TilemapMeta {
@@ -368,7 +355,7 @@ pub fn queue_tilemaps(
         }));
 
         let draw_tilemap_function = draw_functions.read().get_id::<DrawTilemap>().unwrap();
-        let key = SpritePipelineKey::from_msaa_samples(msaa.samples);
+        let key = TilemapPipelineKey::from_msaa_samples(msaa.samples);
         let pipeline = pipelines.specialize(&mut pipeline_cache, &tilemap_pipeline, key);
 
         // Vertex buffer indices
@@ -382,17 +369,12 @@ pub fn queue_tilemaps(
             transparent_phase.items.reserve(tilemaps.len());
 
             // Sort sprites by z for correct transparency and then by handle to improve batching
-            tilemaps.sort_unstable_by(|a, b| {
-                match a
-                    .transform
-                    .translation
-                    .z
-                    .partial_cmp(&b.transform.translation.z)
-                {
+            tilemaps.sort_unstable_by(
+                |a, b| match a.transform.translation.z.partial_cmp(&b.transform.translation.z) {
                     Some(Ordering::Equal) | None => a.image_handle_id.cmp(&b.image_handle_id),
                     Some(other) => other,
-                }
-            });
+                },
+            );
 
             for tilemap in tilemaps.iter() {
                 let batch = TilemapBatch {
@@ -403,9 +385,7 @@ pub fn queue_tilemaps(
                 let batch_entity;
 
                 // Set-up a new possible batch
-                if let Some(gpu_image) =
-                    gpu_images.get(&Handle::weak(batch.image_handle_id))
-                {
+                if let Some(gpu_image) = gpu_images.get(&Handle::weak(batch.image_handle_id)) {
                     image_size = Vec2::new(gpu_image.size.width, gpu_image.size.height);
                     batch_entity = commands.spawn_bundle((batch,)).id();
 
@@ -417,9 +397,7 @@ pub fn queue_tilemaps(
                                 entries: &[
                                     BindGroupEntry {
                                         binding: 0,
-                                        resource: BindingResource::TextureView(
-                                            &gpu_image.texture_view,
-                                        ),
+                                        resource: BindingResource::TextureView(&gpu_image.texture_view),
                                     },
                                     BindGroupEntry {
                                         binding: 1,
@@ -507,9 +485,7 @@ pub fn queue_tilemaps(
                 }
             }
         }
-        sprite_meta
-            .vertices
-            .write_buffer(&render_device, &render_queue);
+        sprite_meta.vertices.write_buffer(&render_device, &render_queue);
     }
 }
 
@@ -571,10 +547,10 @@ impl<P: BatchedPhaseItem> RenderCommand<P> for DrawTilemapBatch {
     fn render<'w>(
         _view: Entity,
         item: &P,
-        (tilemap_meta, query_batch): SystemParamItem<'w, '_, Self::Param>,
+        (tilemap_meta, _query_batch): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let tilemap_batch = query_batch.get(item.entity()).unwrap();
+        //let tilemap_batch = query_batch.get(item.entity()).unwrap();
         let tilemap_meta = tilemap_meta.into_inner();
 
         pass.set_vertex_buffer(0, tilemap_meta.vertices.buffer().unwrap().slice(..));

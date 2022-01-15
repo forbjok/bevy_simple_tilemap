@@ -1,4 +1,8 @@
-use bevy::{math::ivec3, prelude::*, render::camera::{ActiveCameras, Camera}};
+use bevy::{
+    math::ivec3,
+    prelude::*,
+    render::camera::{ActiveCameras, Camera},
+};
 
 use bevy_simple_tilemap::prelude::*;
 

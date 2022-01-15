@@ -7,7 +7,8 @@ use bevy::{
     reflect::TypeUuid,
     render::{
         camera::{ActiveCameras, Camera},
-        mesh::Indices, render_resource::PrimitiveTopology,
+        mesh::Indices,
+        render_resource::PrimitiveTopology,
     },
     tasks::AsyncComputeTaskPool,
     utils::{HashMap, HashSet},
@@ -341,7 +342,7 @@ pub(crate) fn remesh_chunks_system(
 }
  */
 
- /*
+/*
 /// Perform frustum culling of chunks
 pub(crate) fn tilemap_frustum_culling_system(
     mut commands: Commands,

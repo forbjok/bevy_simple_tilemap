@@ -9,8 +9,8 @@ use bevy::{
 };
 
 use crate::render::{
-    self, DrawTilemap, ExtractedTilemaps, ImageBindGroups, TilemapAssetEvents, TilemapMeta, TilemapPipeline,
-    TILEMAP_SHADER_HANDLE,
+    self, draw::DrawTilemap, pipeline::TilemapPipeline, ExtractedTilemaps, ImageBindGroups, TilemapAssetEvents,
+    TilemapMeta, TILEMAP_SHADER_HANDLE,
 };
 
 #[derive(Default)]
@@ -57,10 +57,10 @@ impl Plugin for SimpleTileMapPlugin {
                 .add_render_command::<Transparent2d, DrawTilemap>()
                 .add_system_to_stage(
                     RenderStage::Extract,
-                    render::extract_tilemaps.label(TilemapSystem::ExtractTilemaps),
+                    render::extract::extract_tilemaps.label(TilemapSystem::ExtractTilemaps),
                 )
-                .add_system_to_stage(RenderStage::Extract, render::extract_tilemap_events)
-                .add_system_to_stage(RenderStage::Queue, render::queue_tilemaps);
+                .add_system_to_stage(RenderStage::Extract, render::extract::extract_tilemap_events)
+                .add_system_to_stage(RenderStage::Queue, render::queue::queue_tilemaps);
         };
     }
 }

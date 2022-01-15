@@ -25,7 +25,7 @@ fn input_system(
     const MOVE_SPEED: f32 = 1000.0;
     const ZOOM_SPEED: f32 = 10.0;
 
-    if let Some(active_camera_entity) = active_cameras.get("Camera2d").and_then(|ac| ac.entity) {
+    if let Some(active_camera_entity) = active_cameras.get("camera_2d").and_then(|ac| ac.entity) {
         if let Ok((mut tf,)) = camera_transform_query.get_mut(active_camera_entity) {
             if keyboard_input.pressed(KeyCode::X) {
                 tf.scale -= Vec3::splat(ZOOM_SPEED) * time.delta_seconds();

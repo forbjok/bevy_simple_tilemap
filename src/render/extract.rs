@@ -12,7 +12,7 @@ use crate::TileMap;
 use super::*;
 
 pub fn extract_tilemap_events(mut render_world: ResMut<RenderWorld>, mut image_events: EventReader<AssetEvent<Image>>) {
-    let timer = Instant::now();
+    //let timer = Instant::now();
 
     let mut events = render_world.get_resource_mut::<TilemapAssetEvents>().unwrap();
     let TilemapAssetEvents { ref mut images } = *events;
@@ -33,7 +33,7 @@ pub fn extract_tilemap_events(mut render_world: ResMut<RenderWorld>, mut image_e
         });
     }
 
-    info!("EXT TM EVENTS {:?}", timer.elapsed());
+    //info!("EXT TM EVENTS {:?}", timer.elapsed());
 }
 
 pub fn extract_tilemaps(
@@ -42,7 +42,7 @@ pub fn extract_tilemaps(
     texture_atlases: Res<Assets<TextureAtlas>>,
     tilemap_query: Query<(&ComputedVisibility, &TileMap, &GlobalTransform, &Handle<TextureAtlas>)>,
 ) {
-    let timer = Instant::now();
+    //let timer = Instant::now();
 
     let mut extracted_tilemaps = render_world.get_resource_mut::<ExtractedTilemaps>().unwrap();
     extracted_tilemaps.tilemaps.clear();
@@ -79,5 +79,5 @@ pub fn extract_tilemaps(
             }
         }
     }
-    info!("EXT TILEMAP {:?}", timer.elapsed());
+    //info!("EXT TILEMAP {:?}", timer.elapsed());
 }

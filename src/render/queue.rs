@@ -165,6 +165,7 @@ pub fn queue_tilemaps(
                     for uv in &mut uvs {
                         *uv = (rect.min + *uv * rect_size) / image_size;
                     }
+
                     let quad_size = rect_size;
 
                     // Override the size if a custom one is specified
@@ -172,7 +173,7 @@ pub fn queue_tilemaps(
                     //    quad_size = custom_size;
                     //}
 
-                    let tile_pos = tile.pos.as_vec2() * rect_size; // TODO: Make work
+                    let tile_pos = tile.pos.as_vec2() * quad_size; // TODO: Make work
 
                     // Apply size and global transform
                     let positions = QUAD_VERTEX_POSITIONS.map(|quad_pos| {

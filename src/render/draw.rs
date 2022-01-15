@@ -26,7 +26,7 @@ impl<const I: usize> EntityRenderCommand for SetTilemapViewBindGroup<I> {
         (sprite_meta, view_query): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let timer = Instant::now();
+        //let timer = Instant::now();
 
         let view_uniform = view_query.get(view).unwrap();
         pass.set_bind_group(
@@ -35,7 +35,7 @@ impl<const I: usize> EntityRenderCommand for SetTilemapViewBindGroup<I> {
             &[view_uniform.offset],
         );
 
-        info!("SetTilemapViewBindGroup {:?}", timer.elapsed());
+        //info!("SetTilemapViewBindGroup {:?}", timer.elapsed());
         RenderCommandResult::Success
     }
 }
@@ -49,7 +49,7 @@ impl<const I: usize> EntityRenderCommand for SetTilemapTextureBindGroup<I> {
         (image_bind_groups, query_batch): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let timer = Instant::now();
+        //let timer = Instant::now();
 
         let tilemap_batch = query_batch.get(item).unwrap();
         let image_bind_groups = image_bind_groups.into_inner();
@@ -63,7 +63,7 @@ impl<const I: usize> EntityRenderCommand for SetTilemapTextureBindGroup<I> {
             &[],
         );
 
-        info!("SetTilemapTextureBindGroup {:?}", timer.elapsed());
+        //info!("SetTilemapTextureBindGroup {:?}", timer.elapsed());
         RenderCommandResult::Success
     }
 }
@@ -78,7 +78,7 @@ impl<P: BatchedPhaseItem> RenderCommand<P> for DrawTilemapBatch {
         (tilemap_meta, _query_batch): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let timer = Instant::now();
+        //let timer = Instant::now();
 
         //let tilemap_batch = query_batch.get(item.entity()).unwrap();
         let tilemap_meta = tilemap_meta.into_inner();
@@ -87,7 +87,7 @@ impl<P: BatchedPhaseItem> RenderCommand<P> for DrawTilemapBatch {
 
         pass.draw(item.batch_range().as_ref().unwrap().clone(), 0..1);
 
-        info!("DRAW {:?}", timer.elapsed());
+        //info!("DRAW {:?}", timer.elapsed());
         RenderCommandResult::Success
     }
 }

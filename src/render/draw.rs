@@ -55,7 +55,7 @@ impl<const I: usize> EntityRenderCommand for SetTilemapTextureBindGroup<I> {
         let image_bind_groups = image_bind_groups.into_inner();
 
         pass.set_bind_group(
-            1,
+            I,
             image_bind_groups
                 .values
                 .get(&Handle::weak(tilemap_batch.image_handle_id))

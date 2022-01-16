@@ -7,6 +7,7 @@ use super::*;
 pub struct TilemapPipeline {
     pub(super) view_layout: BindGroupLayout,
     pub(super) material_layout: BindGroupLayout,
+    pub(super) tile_gpu_data_layout: BindGroupLayout,
 }
 
 bitflags::bitflags! {
@@ -74,9 +75,24 @@ impl FromWorld for TilemapPipeline {
             label: Some("tilemap_material_layout"),
         });
 
+        let tile_gpu_data_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            entries: &[BindGroupLayoutEntry {
+                binding: 0,
+                visibility: ShaderStages::VERTEX,
+                ty: BindingType::Buffer {
+                    ty: BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+            label: Some("tilemap_tile_gpu_data_layout"),
+        });
+
         Self {
             view_layout,
             material_layout,
+            tile_gpu_data_layout,
         }
     }
 }
@@ -86,7 +102,7 @@ impl SpecializedPipeline for TilemapPipeline {
 
     fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
         let vertex_buffer_layout = VertexBufferLayout {
-            array_stride: 24,
+            array_stride: 20,
             step_mode: VertexStepMode::Vertex,
             attributes: vec![
                 VertexAttribute {
@@ -98,11 +114,6 @@ impl SpecializedPipeline for TilemapPipeline {
                     format: VertexFormat::Float32x2,
                     offset: 12,
                     shader_location: 1,
-                },
-                VertexAttribute {
-                    format: VertexFormat::Uint32,
-                    offset: 20,
-                    shader_location: 2,
                 },
             ],
         };
@@ -126,7 +137,7 @@ impl SpecializedPipeline for TilemapPipeline {
                     write_mask: ColorWrites::ALL,
                 }],
             }),
-            layout: Some(vec![self.view_layout.clone(), self.material_layout.clone()]),
+            layout: Some(vec![self.view_layout.clone(), self.material_layout.clone(), self.tile_gpu_data_layout.clone()]),
             primitive: PrimitiveState {
                 front_face: FrontFace::Ccw,
                 cull_mode: None,

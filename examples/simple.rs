@@ -65,6 +65,7 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atl
             ivec3(-1, 0, 0),
             Some(Tile {
                 sprite_index: 0,
+                color: Color::GREEN,
                 ..Default::default()
             }),
         ),

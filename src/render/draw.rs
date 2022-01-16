@@ -13,6 +13,7 @@ pub type DrawTilemap = (
     SetItemPipeline,
     SetTilemapViewBindGroup<0>,
     SetTilemapTextureBindGroup<1>,
+    SetTilemapTileGpuDataBindGroup<2>,
     DrawTilemapBatch,
 );
 
@@ -39,6 +40,7 @@ impl<const I: usize> EntityRenderCommand for SetTilemapViewBindGroup<I> {
         RenderCommandResult::Success
     }
 }
+
 pub struct SetTilemapTextureBindGroup<const I: usize>;
 impl<const I: usize> EntityRenderCommand for SetTilemapTextureBindGroup<I> {
     type Param = (SRes<ImageBindGroups>, SQuery<Read<TilemapBatch>>);
@@ -64,6 +66,31 @@ impl<const I: usize> EntityRenderCommand for SetTilemapTextureBindGroup<I> {
         );
 
         //info!("SetTilemapTextureBindGroup {:?}", timer.elapsed());
+        RenderCommandResult::Success
+    }
+}
+
+pub struct SetTilemapTileGpuDataBindGroup<const I: usize>;
+impl<const I: usize> EntityRenderCommand for SetTilemapTileGpuDataBindGroup<I> {
+    type Param = (SRes<TilemapMeta>,);
+
+    fn render<'w>(
+        _view: Entity,
+        _item: Entity,
+        (tilemap_meta,): SystemParamItem<'w, '_, Self::Param>,
+        pass: &mut TrackedRenderPass<'w>,
+    ) -> RenderCommandResult {
+        //let timer = Instant::now();
+
+        if let Some(bind_group) = tilemap_meta.into_inner().tile_gpu_data_bind_group.as_ref() {
+            pass.set_bind_group(
+                I,
+                bind_group,
+                &[],
+            );
+        }
+
+        //info!("SetTilemapTileGpuDataBindGroup {:?}", timer.elapsed());
         RenderCommandResult::Success
     }
 }

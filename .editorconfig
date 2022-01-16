@@ -12,3 +12,6 @@ insert_final_newline = true
 
 [*.rs]
 indent_size = 4
+
+[*.wgsl]
+indent_size = 4

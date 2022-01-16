@@ -72,6 +72,7 @@ pub fn queue_tilemaps(
 
         // Clear the vertex buffers
         tilemap_meta.vertices.clear();
+        tilemap_meta.tile_gpu_datas.clear();
 
         tilemap_meta.view_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
             entries: &[BindGroupEntry {
@@ -192,11 +193,12 @@ pub fn queue_tilemaps(
                             | ((color[2] * 255.0) as u32) << 16
                             | ((color[3] * 255.0) as u32) << 24;
 
+                        tilemap_meta.tile_gpu_datas.push(TileGpuData { color });
+
                         for i in QUAD_INDICES.iter() {
                             tilemap_meta.vertices.push(TilemapVertex {
                                 position: positions[*i],
                                 uv: uvs[*i].into(),
-                                color,
                             });
                         }
 
@@ -217,7 +219,22 @@ pub fn queue_tilemaps(
                     batch_range: Some(item_start..item_end),
                 });
             }
-        }
+
+            // Insert a dummy TileGpuData if there are none, to prevent crashing.
+            if tilemap_meta.tile_gpu_datas.is_empty() {
+                tilemap_meta.tile_gpu_datas.push(TileGpuData::default());
+            }
+
+            tilemap_meta.tile_gpu_datas.write_buffer(&render_device, &render_queue);
+            tilemap_meta.tile_gpu_data_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
+                entries: &[BindGroupEntry {
+                    binding: 0,
+                    resource: BindingResource::Buffer(tilemap_meta.tile_gpu_datas.buffer().unwrap().as_entire_buffer_binding()),
+                }],
+                label: Some("tilemap_tile_gpu_data_bind_group"),
+                layout: &tilemap_pipeline.tile_gpu_data_layout,
+            }));
+    }
 
         tilemap_meta.vertices.write_buffer(&render_device, &render_queue);
     }

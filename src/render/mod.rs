@@ -3,7 +3,7 @@ use bevy::{
     math::{IVec2, Vec2, IVec3},
     prelude::{AssetEvent, Color, Component, GlobalTransform, Handle, HandleUntyped, Image, Shader},
     reflect::TypeUuid,
-    render::render_resource::{BindGroup, BufferUsages, BufferVec},
+    render::render_resource::{BindGroup, BufferUsages, BufferVec, std140::AsStd140},
     sprite::Rect,
     utils::HashMap,
 };
@@ -52,20 +52,29 @@ pub struct TilemapAssetEvents {
 struct TilemapVertex {
     pub position: [f32; 3],
     pub uv: [f32; 2],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Default, Pod, Zeroable)]
+pub struct TileGpuData {
     pub color: u32,
 }
 
 /// Probably a cache of GPU data to be used in shaders?
 pub struct TilemapMeta {
     vertices: BufferVec<TilemapVertex>,
+    tile_gpu_datas: BufferVec<TileGpuData>,
     view_bind_group: Option<BindGroup>,
+    tile_gpu_data_bind_group: Option<BindGroup>,
 }
 
 impl Default for TilemapMeta {
     fn default() -> Self {
         Self {
             vertices: BufferVec::new(BufferUsages::VERTEX),
+            tile_gpu_datas: BufferVec::new(BufferUsages::STORAGE),
             view_bind_group: None,
+            tile_gpu_data_bind_group: None,
         }
     }
 }

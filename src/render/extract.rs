@@ -5,6 +5,7 @@ use bevy::render::{texture::Image, view::ComputedVisibility, RenderWorld};
 use bevy::sprite::TextureAtlas;
 use bevy::transform::components::GlobalTransform;
 use bevy::utils::Instant;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator, IndexedParallelIterator};
 
 use crate::tilemap::row_major_pos;
 use crate::TileMap;
@@ -53,29 +54,27 @@ pub fn extract_tilemaps(
 
         if let Some(texture_atlas) = texture_atlases.get(texture_atlas_handle) {
             if images.contains(&texture_atlas.texture) {
-                let mut chunks: Vec<ExtractedChunk> = Vec::with_capacity(tilemap.chunks.len());
-
-                for (_pos, chunk) in tilemap.chunks.iter() {
-                    let mut tiles: Vec<ExtractedTile> = Vec::with_capacity(chunk.tiles.len());
-
-                    for (i, tile) in chunk.tiles.iter().enumerate() {
+                let chunks: Vec<ExtractedChunk> = tilemap.chunks.par_iter().map(|(_pos, chunk)| {
+                    let tiles: Vec<ExtractedTile> = chunk.tiles.par_iter().enumerate().filter_map(|(i, tile)| {
                         if let Some(tile) = tile {
                             let rect = texture_atlas.textures[tile.sprite_index as usize];
 
-                            tiles.push(ExtractedTile {
+                            Some(ExtractedTile {
                                 pos: chunk.origin.truncate() + row_major_pos(i),
                                 rect,
                                 color: tile.color,
                                 flags: tile.flags,
-                            });
+                            })
+                        } else {
+                            None
                         }
-                    }
+                    }).collect();
 
-                    chunks.push(ExtractedChunk {
+                    ExtractedChunk {
                         origin: chunk.origin,
                         tiles,
-                    });
-                }
+                    }
+                }).collect();
 
                 extracted_tilemaps.tilemaps.push(ExtractedTilemap {
                     transform: *transform,

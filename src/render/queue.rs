@@ -15,6 +15,7 @@ use bevy::render::{
     view::ViewUniforms,
 };
 use bevy::utils::Instant;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::TileFlags;
 
@@ -113,8 +114,6 @@ pub fn queue_tilemaps(
                 let image_size;
                 let batch_entity;
 
-                let item_start = index;
-
                 // Set-up a new possible batch
                 if let Some(gpu_image) = gpu_images.get(&Handle::weak(batch.image_handle_id)) {
                     image_size = Vec2::new(gpu_image.size.width, gpu_image.size.height);
@@ -144,7 +143,12 @@ pub fn queue_tilemaps(
                     continue;
                 }
 
-                for chunk in tilemap.chunks.iter() {
+                let chunk_results: Vec<(Vec<TilemapVertex>, Vec<TileGpuData>)> = tilemap.chunks.par_iter().map(|chunk| {
+                    let tile_count = chunk.tiles.len();
+
+                    let mut vertices: Vec<TilemapVertex> = Vec::with_capacity(tile_count * QUAD_INDICES.len());
+                    let mut tile_gpu_datas: Vec<TileGpuData> = Vec::with_capacity(tile_count);
+
                     for tile in chunk.tiles.iter() {
                         // Calculate vertex data for this item
 
@@ -193,17 +197,33 @@ pub fn queue_tilemaps(
                             | ((color[2] * 255.0) as u32) << 16
                             | ((color[3] * 255.0) as u32) << 24;
 
-                        tilemap_meta.tile_gpu_datas.push(TileGpuData { color });
+                        tile_gpu_datas.push(TileGpuData { color });
 
                         for i in QUAD_INDICES.iter() {
-                            tilemap_meta.vertices.push(TilemapVertex {
+                            vertices.push(TilemapVertex {
                                 position: positions[*i],
                                 uv: uvs[*i].into(),
                             });
                         }
-
-                        index += QUAD_INDICES.len() as u32;
                     }
+
+                    (vertices, tile_gpu_datas)
+                }).collect();
+
+                let item_start = index;
+
+                for (vertices, tile_gpu_datas) in chunk_results.into_iter() {
+                    let vertex_count = vertices.len() as u32;
+
+                    for vertex in vertices.into_iter() {
+                        tilemap_meta.vertices.push(vertex);
+                    }
+
+                    for tile_gpu_data in tile_gpu_datas.into_iter() {
+                        tilemap_meta.tile_gpu_datas.push(tile_gpu_data);
+                    }
+
+                    index += vertex_count;
                 }
 
                 let item_end = index;
@@ -234,7 +254,7 @@ pub fn queue_tilemaps(
                 label: Some("tilemap_tile_gpu_data_bind_group"),
                 layout: &tilemap_pipeline.tile_gpu_data_layout,
             }));
-    }
+        }
 
         tilemap_meta.vertices.write_buffer(&render_device, &render_queue);
     }

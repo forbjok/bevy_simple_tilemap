@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use bevy::{
     core::FixedTimestep,
     prelude::*,
@@ -59,8 +57,6 @@ fn input_system(
 
 /// Draw line of foreground (layer 1) tiles, moving it up by one each time
 fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<i32>) {
-    let upd_tiles = Instant::now();
-
     let line_y = *count % 10;
 
     for mut tilemap in query.iter_mut() {
@@ -83,8 +79,6 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<i32>) {
         // Perform tile update
         tilemap.set_tiles(tiles);
     }
-
-    dbg!(upd_tiles.elapsed());
 
     *count += 1;
 }

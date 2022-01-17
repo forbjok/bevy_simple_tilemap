@@ -1,4 +1,4 @@
-use std::{ops::Range, time::Instant};
+use std::ops::Range;
 
 use bevy::{
     prelude::*,
@@ -65,8 +65,6 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<u32>) {
 
     *count += 1;
 
-    let upd_tiles = Instant::now();
-
     for mut tilemap in query.iter_mut() {
         // List to store set tile operations
         let mut tiles: Vec<(IVec3, Option<Tile>)> = Vec::with_capacity((WIDTH * HEIGHT) as usize);
@@ -93,8 +91,6 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<u32>) {
         // Perform tile update
         tilemap.set_tiles(tiles);
     }
-
-    //dbg!(upd_tiles.elapsed());
 }
 
 fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atlases: ResMut<Assets<TextureAtlas>>) {

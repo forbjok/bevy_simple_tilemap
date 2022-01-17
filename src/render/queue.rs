@@ -106,7 +106,7 @@ pub fn queue_tilemaps(
                 },
             );
 
-            for tilemap in tilemaps.iter() {
+            for tilemap in tilemaps.iter_mut() {
                 let batch = TilemapBatch {
                     image_handle_id: tilemap.image_handle_id,
                 };
@@ -143,11 +143,16 @@ pub fn queue_tilemaps(
                     continue;
                 }
 
-                let chunk_results: Vec<(Vec<TilemapVertex>, Vec<TileGpuData>)> = tilemap.chunks.par_iter().map(|chunk| {
+                let chunks = &mut tilemap.chunks;
+                chunks.sort_unstable_by(|a, b| a.origin.z.cmp(&b.origin.z));
+
+                let chunk_results: Vec<(Vec<TilemapVertex>, Vec<TileGpuData>)> = chunks.par_iter().map(|chunk| {
                     let tile_count = chunk.tiles.len();
 
                     let mut vertices: Vec<TilemapVertex> = Vec::with_capacity(tile_count * QUAD_INDICES.len());
                     let mut tile_gpu_datas: Vec<TileGpuData> = Vec::with_capacity(tile_count);
+
+                    let z = chunk.origin.z as f32;
 
                     for tile in chunk.tiles.iter() {
                         // Calculate vertex data for this item
@@ -185,7 +190,7 @@ pub fn queue_tilemaps(
                         let positions = QUAD_VERTEX_POSITIONS.map(|quad_pos| {
                             tilemap
                                 .transform
-                                .mul_vec3((tile_pos + (quad_pos * quad_size)).extend(0.))
+                                .mul_vec3((tile_pos + (quad_pos * quad_size)).extend(z))
                                 .into()
                         });
 

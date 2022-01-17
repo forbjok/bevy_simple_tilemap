@@ -1,82 +1,89 @@
-use bevy::asset::{Assets, HandleUntyped};
-use bevy::reflect::TypeUuid;
-use bevy::render::render_graph::AssetRenderResourcesNode;
-use bevy::render::{
-    pipeline::{
-        BlendFactor, BlendOperation, BlendState, ColorTargetState, ColorWrite, CompareFunction, CullMode,
-        DepthBiasState, DepthStencilState, FrontFace, PipelineDescriptor, PolygonMode, PrimitiveState,
-        PrimitiveTopology, StencilFaceState, StencilState,
-    },
-    render_graph::RenderGraph,
-    shader::{Shader, ShaderStage, ShaderStages},
-    texture::TextureFormat,
+use bevy::{
+    asset::HandleId,
+    math::{IVec2, IVec3, Vec2},
+    prelude::{AssetEvent, Color, Component, GlobalTransform, Handle, HandleUntyped, Image, Shader},
+    reflect::TypeUuid,
+    render::render_resource::{BindGroup, BufferUsages, BufferVec},
+    sprite::Rect,
+    utils::HashMap,
 };
+use bytemuck::{Pod, Zeroable};
 
-use crate::tilemap::ChunkGpuData;
+use crate::TileFlags;
 
-pub const TILEMAP_PIPELINE_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(PipelineDescriptor::TYPE_UUID, 9765236402292098257);
+pub mod draw;
+pub mod extract;
+pub mod pipeline;
+pub mod queue;
 
-pub fn build_tilemap_pipeline(shaders: &mut Assets<Shader>) -> PipelineDescriptor {
-    PipelineDescriptor {
-        depth_stencil: Some(DepthStencilState {
-            format: TextureFormat::Depth32Float,
-            depth_write_enabled: true,
-            depth_compare: CompareFunction::LessEqual,
-            stencil: StencilState {
-                front: StencilFaceState::IGNORE,
-                back: StencilFaceState::IGNORE,
-                read_mask: 0,
-                write_mask: 0,
-            },
-            bias: DepthBiasState {
-                constant: 0,
-                slope_scale: 0.0,
-                clamp: 0.0,
-            },
-            clamp_depth: false,
-        }),
-        color_target_states: vec![ColorTargetState {
-            format: TextureFormat::default(),
-            color_blend: BlendState {
-                src_factor: BlendFactor::SrcAlpha,
-                dst_factor: BlendFactor::OneMinusSrcAlpha,
-                operation: BlendOperation::Add,
-            },
-            alpha_blend: BlendState {
-                src_factor: BlendFactor::One,
-                dst_factor: BlendFactor::One,
-                operation: BlendOperation::Add,
-            },
-            write_mask: ColorWrite::ALL,
-        }],
-        primitive: PrimitiveState {
-            topology: PrimitiveTopology::TriangleList,
-            strip_index_format: None,
-            front_face: FrontFace::Ccw,
-            cull_mode: CullMode::None,
-            polygon_mode: PolygonMode::Fill,
-        },
-        ..PipelineDescriptor::new(ShaderStages {
-            vertex: shaders.add(Shader::from_glsl(ShaderStage::Vertex, include_str!("tilemap.vert"))),
-            fragment: Some(shaders.add(Shader::from_glsl(ShaderStage::Fragment, include_str!("tilemap.frag")))),
-        })
+pub const TILEMAP_SHADER_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 9765236402292098257);
+
+pub struct ExtractedTile {
+    pub pos: IVec2,
+    pub rect: Rect,
+    pub color: Color,
+    pub flags: TileFlags,
+}
+
+pub struct ExtractedChunk {
+    pub origin: IVec3,
+    pub tiles: Vec<ExtractedTile>,
+}
+
+pub struct ExtractedTilemap {
+    pub transform: GlobalTransform,
+    pub image_handle_id: HandleId,
+    pub atlas_size: Vec2,
+    pub chunks: Vec<ExtractedChunk>,
+}
+
+#[derive(Default)]
+pub struct ExtractedTilemaps {
+    pub tilemaps: Vec<ExtractedTilemap>,
+}
+
+#[derive(Default)]
+pub struct TilemapAssetEvents {
+    pub images: Vec<AssetEvent<Image>>,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Pod, Zeroable)]
+struct TilemapVertex {
+    pub position: [f32; 3],
+    pub uv: [f32; 2],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Default, Pod, Zeroable)]
+pub struct TileGpuData {
+    pub color: u32,
+}
+
+pub struct TilemapMeta {
+    vertices: BufferVec<TilemapVertex>,
+    tile_gpu_datas: BufferVec<TileGpuData>,
+    view_bind_group: Option<BindGroup>,
+    tile_gpu_data_bind_group: Option<BindGroup>,
+}
+
+impl Default for TilemapMeta {
+    fn default() -> Self {
+        Self {
+            vertices: BufferVec::new(BufferUsages::VERTEX),
+            tile_gpu_datas: BufferVec::new(BufferUsages::STORAGE),
+            view_bind_group: None,
+            tile_gpu_data_bind_group: None,
+        }
     }
 }
 
-pub mod node {
-    pub const TILEMAP_CHUNK_GPU_DATA: &str = "tilemap_chunk_gpu_data";
+#[derive(Component, Eq, PartialEq, Copy, Clone)]
+pub struct TilemapBatch {
+    image_handle_id: HandleId,
 }
 
-pub(crate) fn add_tilemap_graph(
-    graph: &mut RenderGraph,
-    pipelines: &mut Assets<PipelineDescriptor>,
-    shaders: &mut Assets<Shader>,
-) {
-    graph.add_system_node(
-        node::TILEMAP_CHUNK_GPU_DATA,
-        AssetRenderResourcesNode::<ChunkGpuData>::new(false),
-    );
-
-    pipelines.set_untracked(TILEMAP_PIPELINE_HANDLE, build_tilemap_pipeline(shaders));
+#[derive(Default)]
+pub struct ImageBindGroups {
+    values: HashMap<Handle<Image>, BindGroup>,
 }

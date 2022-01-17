@@ -8,7 +8,7 @@ use bevy::{
 use bevy_simple_tilemap::prelude::*;
 
 fn main() {
-    App::build()
+    App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(SimpleTileMapPlugin)
         .add_system(update_tiles_system.system())
@@ -20,14 +20,14 @@ fn main() {
 fn input_system(
     active_cameras: Res<ActiveCameras>,
     mut camera_transform_query: Query<(&mut Transform,), With<Camera>>,
-    mut tilemap_visible_query: Query<&mut Visible, With<TileMap>>,
+    mut tilemap_visible_query: Query<&mut Visibility, With<TileMap>>,
     keyboard_input: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {
     const MOVE_SPEED: f32 = 1000.0;
     const ZOOM_SPEED: f32 = 10.0;
 
-    if let Some(active_camera_entity) = active_cameras.get("Camera2d").and_then(|ac| ac.entity) {
+    if let Some(active_camera_entity) = active_cameras.get("camera_2d").and_then(|ac| ac.entity) {
         if let Ok((mut tf,)) = camera_transform_query.get_mut(active_camera_entity) {
             if keyboard_input.pressed(KeyCode::X) {
                 tf.scale -= Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
@@ -94,7 +94,7 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<u32>) {
         tilemap.set_tiles(tiles);
     }
 
-    dbg!(upd_tiles.elapsed());
+    //dbg!(upd_tiles.elapsed());
 }
 
 fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atlases: ResMut<Assets<TextureAtlas>>) {

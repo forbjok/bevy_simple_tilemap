@@ -1,9 +1,17 @@
 use bevy::{
+    core_pipeline::Transparent2d,
     prelude::*,
-    render::{pipeline::PipelineDescriptor, render_graph::RenderGraph},
+    render::{
+        render_phase::AddRenderCommand,
+        render_resource::{Shader, SpecializedPipelines},
+        RenderApp, RenderStage,
+    },
 };
 
-use crate::tilemap::ChunkGpuData;
+use crate::render::{
+    self, draw::DrawTilemap, pipeline::TilemapPipeline, ExtractedTilemaps, ImageBindGroups, TilemapAssetEvents,
+    TilemapMeta, TILEMAP_SHADER_HANDLE,
+};
 
 #[derive(Default)]
 pub struct SimpleTileMapPlugin;
@@ -11,46 +19,44 @@ pub struct SimpleTileMapPlugin;
 #[derive(Clone, Debug, Eq, Hash, PartialEq, StageLabel)]
 enum SimpleTileMapStage {
     Update,
-    Remesh,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
+pub enum TileMapSystem {
+    ExtractTilemaps,
 }
 
 impl Plugin for SimpleTileMapPlugin {
-    fn build(&self, app: &mut AppBuilder) {
-        app.add_asset::<ChunkGpuData>()
-            .add_stage_before(
-                CoreStage::PostUpdate,
-                SimpleTileMapStage::Update,
-                SystemStage::parallel(),
-            )
-            .add_stage_after(
-                SimpleTileMapStage::Update,
-                SimpleTileMapStage::Remesh,
-                SystemStage::parallel(),
-            )
-            .add_system_to_stage(
-                SimpleTileMapStage::Update,
-                crate::tilemap::update_chunks_system.system(),
-            )
-            .add_system_to_stage(
-                SimpleTileMapStage::Update,
-                crate::tilemap::propagate_visibility_system.system(),
-            )
-            .add_system_to_stage(
-                SimpleTileMapStage::Update,
-                crate::tilemap::tilemap_frustum_culling_system.system(),
-            )
-            .add_system_to_stage(
-                SimpleTileMapStage::Remesh,
-                crate::tilemap::remesh_chunks_system.system(),
-            );
+    fn build(&self, app: &mut App) {
+        app.add_stage_before(
+            CoreStage::PostUpdate,
+            SimpleTileMapStage::Update,
+            SystemStage::parallel(),
+        )
+        .add_system_to_stage(
+            SimpleTileMapStage::Update,
+            crate::tilemap::update_chunks_system.system(),
+        );
 
-        let world = app.world_mut();
+        let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
+        let sprite_shader = Shader::from_wgsl(include_str!("render/tilemap.wgsl"));
+        shaders.set_untracked(TILEMAP_SHADER_HANDLE, sprite_shader);
 
-        let world_cell = world.cell();
-        let mut render_graph = world_cell.get_resource_mut::<RenderGraph>().unwrap();
-        let mut pipelines = world_cell.get_resource_mut::<Assets<PipelineDescriptor>>().unwrap();
-        let mut shaders = world_cell.get_resource_mut::<Assets<Shader>>().unwrap();
-
-        crate::render::add_tilemap_graph(&mut render_graph, &mut pipelines, &mut shaders);
+        if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
+            render_app
+                .init_resource::<ImageBindGroups>()
+                .init_resource::<TilemapPipeline>()
+                .init_resource::<SpecializedPipelines<TilemapPipeline>>()
+                .init_resource::<TilemapMeta>()
+                .init_resource::<ExtractedTilemaps>()
+                .init_resource::<TilemapAssetEvents>()
+                .add_render_command::<Transparent2d, DrawTilemap>()
+                .add_system_to_stage(
+                    RenderStage::Extract,
+                    render::extract::extract_tilemaps.label(TileMapSystem::ExtractTilemaps),
+                )
+                .add_system_to_stage(RenderStage::Extract, render::extract::extract_tilemap_events)
+                .add_system_to_stage(RenderStage::Queue, render::queue::queue_tilemaps);
+        };
     }
 }

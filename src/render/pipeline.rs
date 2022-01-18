@@ -101,10 +101,8 @@ impl SpecializedPipeline for TilemapPipeline {
     type Key = TilemapPipelineKey;
 
     fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
-        let vertex_buffer_layout = VertexBufferLayout {
-            array_stride: 20,
-            step_mode: VertexStepMode::Vertex,
-            attributes: vec![
+        let vertex_buffer_layout = {
+            let attributes = vec![
                 VertexAttribute {
                     format: VertexFormat::Float32x3,
                     offset: 0,
@@ -115,7 +113,13 @@ impl SpecializedPipeline for TilemapPipeline {
                     offset: 12,
                     shader_location: 1,
                 },
-            ],
+            ];
+
+            VertexBufferLayout {
+                array_stride: attributes.iter().map(|a| a.format.size()).sum(),
+                step_mode: VertexStepMode::Vertex,
+                attributes,
+            }
         };
 
         let shader_defs = Vec::new();

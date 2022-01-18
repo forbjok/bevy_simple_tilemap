@@ -1,7 +1,7 @@
 use bevy::{
     asset::HandleId,
     math::{IVec2, IVec3, Vec2},
-    prelude::{AssetEvent, Color, Component, GlobalTransform, Handle, HandleUntyped, Image, Shader},
+    prelude::{AssetEvent, Color, Component, Entity, GlobalTransform, Handle, HandleUntyped, Image, Shader},
     reflect::TypeUuid,
     render::render_resource::{BindGroup, BufferUsages, BufferVec},
     sprite::Rect,
@@ -31,6 +31,7 @@ pub struct ExtractedChunk {
 }
 
 pub struct ExtractedTilemap {
+    pub entity: Entity,
     pub transform: GlobalTransform,
     pub image_handle_id: HandleId,
     pub atlas_size: Vec2,
@@ -60,27 +61,34 @@ pub struct TileGpuData {
     pub color: u32,
 }
 
-pub struct TilemapMeta {
+pub struct ChunkMeta {
     vertices: BufferVec<TilemapVertex>,
     tile_gpu_datas: BufferVec<TileGpuData>,
-    view_bind_group: Option<BindGroup>,
     tile_gpu_data_bind_group: Option<BindGroup>,
 }
 
-impl Default for TilemapMeta {
+impl Default for ChunkMeta {
     fn default() -> Self {
         Self {
             vertices: BufferVec::new(BufferUsages::VERTEX),
             tile_gpu_datas: BufferVec::new(BufferUsages::STORAGE),
-            view_bind_group: None,
             tile_gpu_data_bind_group: None,
         }
     }
 }
 
+pub type ChunkKey = (Entity, IVec3);
+
+#[derive(Default)]
+pub struct TilemapMeta {
+    chunks: HashMap<ChunkKey, ChunkMeta>,
+    view_bind_group: Option<BindGroup>,
+}
+
 #[derive(Component, Eq, PartialEq, Copy, Clone)]
 pub struct TilemapBatch {
     image_handle_id: HandleId,
+    chunk_key: (Entity, IVec3),
 }
 
 #[derive(Default)]

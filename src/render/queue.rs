@@ -14,7 +14,7 @@ use bevy::render::{
     texture::Image,
     view::ViewUniforms,
 };
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::TileFlags;
 
@@ -68,10 +68,6 @@ pub fn queue_tilemaps(
     if let Some(view_binding) = view_uniforms.uniforms.binding() {
         let tilemap_meta = &mut tilemap_meta;
 
-        // Clear the vertex buffers
-        tilemap_meta.vertices.clear();
-        tilemap_meta.tile_gpu_datas.clear();
-
         tilemap_meta.view_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
             entries: &[BindGroupEntry {
                 binding: 0,
@@ -85,10 +81,6 @@ pub fn queue_tilemaps(
         let key = TilemapPipelineKey::from_msaa_samples(msaa.samples);
         let pipeline = pipelines.specialize(&mut pipeline_cache, &tilemap_pipeline, key);
 
-        // Vertex buffer indices
-        let mut index = 0;
-
-        // FIXME: VisibleEntities is ignored
         for mut transparent_phase in views.iter_mut() {
             let tilemaps = &mut extracted_tilemaps.tilemaps;
             let image_bind_groups = &mut *image_bind_groups;
@@ -104,21 +96,15 @@ pub fn queue_tilemaps(
             );
 
             for tilemap in tilemaps.iter_mut() {
-                let batch = TilemapBatch {
-                    image_handle_id: tilemap.image_handle_id,
-                };
-
                 let image_size;
-                let batch_entity;
 
                 // Set-up a new possible batch
-                if let Some(gpu_image) = gpu_images.get(&Handle::weak(batch.image_handle_id)) {
+                if let Some(gpu_image) = gpu_images.get(&Handle::weak(tilemap.image_handle_id)) {
                     image_size = Vec2::new(gpu_image.size.width, gpu_image.size.height);
-                    batch_entity = commands.spawn_bundle((batch,)).id();
 
                     image_bind_groups
                         .values
-                        .entry(Handle::weak(batch.image_handle_id))
+                        .entry(Handle::weak(tilemap.image_handle_id))
                         .or_insert_with(|| {
                             render_device.create_bind_group(&BindGroupDescriptor {
                                 entries: &[
@@ -140,16 +126,34 @@ pub fn queue_tilemaps(
                     continue;
                 }
 
-                let chunks = &mut tilemap.chunks;
-                chunks.sort_unstable_by(|a, b| a.origin.z.cmp(&b.origin.z));
+                tilemap.chunks.sort_unstable_by(|a, b| a.origin.z.cmp(&b.origin.z));
 
-                let chunk_results: Vec<(Vec<TilemapVertex>, Vec<TileGpuData>)> = chunks
-                    .par_iter()
-                    .map(|chunk| {
-                        let tile_count = chunk.tiles.len();
+                // Yank each chunk's GPU metadata (if one exists) out of the HashMap
+                // so that we can pass it into the parallel iterator later.
+                // Maybe there is a cleaner way of doing this, but I can't think of one
+                // so this will have to do for now.
+                let chonks: Vec<(ExtractedChunk, Option<(ChunkKey, ChunkMeta)>)> = tilemap
+                    .chunks
+                    .drain(..)
+                    .map(|c| {
+                        let entry = tilemap_meta.chunks.remove_entry(&(tilemap.entity, c.origin));
 
-                        let mut vertices: Vec<TilemapVertex> = Vec::with_capacity(tile_count * QUAD_INDICES.len());
-                        let mut tile_gpu_datas: Vec<TileGpuData> = Vec::with_capacity(tile_count);
+                        (c, entry)
+                    })
+                    .collect();
+
+                // Process extracted chunks in parallel, updating their metadata.
+                let results: Vec<(ChunkKey, ChunkMeta)> = chonks
+                    .into_par_iter()
+                    .map(|(chunk, chunk_meta)| {
+                        let (key, mut chunk_meta) = if let Some((key, chunk_meta)) = chunk_meta {
+                            (key, chunk_meta)
+                        } else {
+                            ((tilemap.entity, chunk.origin), ChunkMeta::default())
+                        };
+
+                        chunk_meta.vertices.clear();
+                        chunk_meta.tile_gpu_datas.clear();
 
                         let z = chunk.origin.z as f32;
 
@@ -201,68 +205,62 @@ pub fn queue_tilemaps(
                                 | ((color[2] * 255.0) as u32) << 16
                                 | ((color[3] * 255.0) as u32) << 24;
 
-                            tile_gpu_datas.push(TileGpuData { color });
+                            chunk_meta.tile_gpu_datas.push(TileGpuData { color });
 
                             for i in QUAD_INDICES.iter() {
-                                vertices.push(TilemapVertex {
+                                chunk_meta.vertices.push(TilemapVertex {
                                     position: positions[*i],
                                     uv: uvs[*i].into(),
                                 });
                             }
                         }
 
-                        (vertices, tile_gpu_datas)
+                        (key, chunk_meta)
                     })
                     .collect();
 
-                let item_start = index;
-
-                for (vertices, tile_gpu_datas) in chunk_results.into_iter() {
-                    let vertex_count = vertices.len() as u32;
-
-                    for vertex in vertices.into_iter() {
-                        tilemap_meta.vertices.push(vertex);
-                    }
-
-                    for tile_gpu_data in tile_gpu_datas.into_iter() {
-                        tilemap_meta.tile_gpu_datas.push(tile_gpu_data);
-                    }
-
-                    index += vertex_count;
+                // (Re-)Insert chunk metadata into the HashMap
+                for (key, chunk_meta) in results {
+                    tilemap_meta.chunks.insert(key, chunk_meta);
                 }
 
-                let item_end = index;
+                // Render all chunks.
+                for (key, chunk_meta) in tilemap_meta.chunks.iter_mut() {
+                    let batch = TilemapBatch {
+                        chunk_key: *key,
+                        image_handle_id: tilemap.image_handle_id,
+                    };
 
-                // These items will be sorted by depth with other phase items
-                let sort_key = FloatOrd(tilemap.transform.translation.z);
+                    let batch_entity = commands.spawn_bundle((batch,)).id();
 
-                transparent_phase.add(Transparent2d {
-                    draw_function: draw_tilemap_function,
-                    pipeline,
-                    entity: batch_entity,
-                    sort_key,
-                    batch_range: Some(item_start..item_end),
-                });
+                    chunk_meta.vertices.write_buffer(&render_device, &render_queue);
+                    chunk_meta.tile_gpu_datas.write_buffer(&render_device, &render_queue);
+
+                    chunk_meta.tile_gpu_data_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
+                        entries: &[BindGroupEntry {
+                            binding: 0,
+                            resource: BindingResource::Buffer(
+                                chunk_meta.tile_gpu_datas.buffer().unwrap().as_entire_buffer_binding(),
+                            ),
+                        }],
+                        label: Some("tilemap_tile_gpu_data_bind_group"),
+                        layout: &tilemap_pipeline.tile_gpu_data_layout,
+                    }));
+
+                    // These items will be sorted by depth with other phase items
+                    let sort_key = FloatOrd(tilemap.transform.translation.z);
+
+                    let vertex_count = chunk_meta.vertices.len() as u32;
+
+                    transparent_phase.add(Transparent2d {
+                        draw_function: draw_tilemap_function,
+                        pipeline,
+                        entity: batch_entity,
+                        sort_key,
+                        batch_range: Some(0..vertex_count),
+                    });
+                }
             }
-
-            // Insert a dummy TileGpuData if there are none, to prevent crashing.
-            if tilemap_meta.tile_gpu_datas.is_empty() {
-                tilemap_meta.tile_gpu_datas.push(TileGpuData::default());
-            }
-
-            tilemap_meta.tile_gpu_datas.write_buffer(&render_device, &render_queue);
-            tilemap_meta.tile_gpu_data_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
-                entries: &[BindGroupEntry {
-                    binding: 0,
-                    resource: BindingResource::Buffer(
-                        tilemap_meta.tile_gpu_datas.buffer().unwrap().as_entire_buffer_binding(),
-                    ),
-                }],
-                label: Some("tilemap_tile_gpu_data_bind_group"),
-                layout: &tilemap_pipeline.tile_gpu_data_layout,
-            }));
         }
-
-        tilemap_meta.vertices.write_buffer(&render_device, &render_queue);
     }
 }

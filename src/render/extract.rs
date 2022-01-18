@@ -37,7 +37,13 @@ pub fn extract_tilemaps(
     mut render_world: ResMut<RenderWorld>,
     images: Res<Assets<Image>>,
     texture_atlases: Res<Assets<TextureAtlas>>,
-    tilemap_query: Query<(&ComputedVisibility, &TileMap, &GlobalTransform, &Handle<TextureAtlas>)>,
+    tilemap_query: Query<(
+        Entity,
+        &ComputedVisibility,
+        &TileMap,
+        &GlobalTransform,
+        &Handle<TextureAtlas>,
+    )>,
     windows: Res<Windows>,
     active_cameras: Res<ActiveCameras>,
     camera_transform_query: Query<&GlobalTransform, With<Camera>>,
@@ -99,7 +105,7 @@ pub fn extract_tilemaps(
 
     let mut extracted_tilemaps = render_world.get_resource_mut::<ExtractedTilemaps>().unwrap();
     extracted_tilemaps.tilemaps.clear();
-    for (computed_visibility, tilemap, transform, texture_atlas_handle) in tilemap_query.iter() {
+    for (entity, computed_visibility, tilemap, transform, texture_atlas_handle) in tilemap_query.iter() {
         if !computed_visibility.is_visible {
             continue;
         }
@@ -161,6 +167,7 @@ pub fn extract_tilemaps(
                     .collect();
 
                 extracted_tilemaps.tilemaps.push(ExtractedTilemap {
+                    entity,
                     transform: *transform,
                     image_handle_id: texture_atlas.texture.id,
                     atlas_size: texture_atlas.size,

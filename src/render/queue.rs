@@ -90,7 +90,7 @@ pub fn queue_tilemaps(
             // Sort tilemaps by z for correct transparency and then by handle to improve batching
             tilemaps.sort_unstable_by(
                 |a, b| match a.transform.translation.z.partial_cmp(&b.transform.translation.z) {
-                    Some(Ordering::Equal) | None => a.image_handle_id.cmp(&b.image_handle_id),
+                    Some(Ordering::Equal) | None => Ordering::Equal,
                     Some(other) => other,
                 },
             );
@@ -125,8 +125,6 @@ pub fn queue_tilemaps(
                     // Skip this item if the texture is not ready
                     continue;
                 }
-
-                tilemap.chunks.sort_unstable_by(|a, b| a.origin.z.cmp(&b.origin.z));
 
                 // Yank each chunk's GPU metadata (if one exists) out of the HashMap
                 // so that we can pass it into the parallel iterator later.
@@ -224,15 +222,19 @@ pub fn queue_tilemaps(
                     tilemap_meta.chunks.insert(key, chunk_meta);
                 }
 
+                let mut sorted_chunks: Vec<_> = tilemap_meta
+                    .chunks
+                    .iter_mut()
+                    .filter(|((_, pos), _)| {
+                        // If chunk is not visible, there is no need to draw it.
+                        tilemap.visible_chunks.contains(pos)
+                    })
+                    .collect();
+
+                sorted_chunks.sort_unstable_by(|((_, a), _), ((_, b), _)| a.z.cmp(&b.z));
+
                 // Render all chunks.
-                for (key, chunk_meta) in tilemap_meta.chunks.iter_mut() {
-                    let (_, pos) = key;
-
-                    // If chunk is not visible, don't bother to draw it.
-                    if !tilemap.visible_chunks.contains(pos) {
-                        continue;
-                    }
-
+                for (key, chunk_meta) in sorted_chunks.into_iter() {
                     let batch = TilemapBatch {
                         chunk_key: *key,
                         image_handle_id: tilemap.image_handle_id,

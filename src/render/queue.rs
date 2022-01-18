@@ -87,13 +87,9 @@ pub fn queue_tilemaps(
 
             transparent_phase.items.reserve(tilemaps.len());
 
-            // Sort tilemaps by z for correct transparency and then by handle to improve batching
-            tilemaps.sort_unstable_by(
-                |a, b| match a.transform.translation.z.partial_cmp(&b.transform.translation.z) {
-                    Some(Ordering::Equal) | None => Ordering::Equal,
-                    Some(other) => other,
-                },
-            );
+            let mut visible_chunks: Vec<(Entity, IVec3)> = Vec::new();
+            let mut tilemap_zs: HashMap<Entity, f32> = HashMap::default();
+            let mut tilemap_image_handle_ids: HashMap<Entity, HandleId> = HashMap::default();
 
             for tilemap in tilemaps.iter_mut() {
                 let image_size;
@@ -222,53 +218,68 @@ pub fn queue_tilemaps(
                     tilemap_meta.chunks.insert(key, chunk_meta);
                 }
 
-                let mut sorted_chunks: Vec<_> = tilemap_meta
-                    .chunks
-                    .iter_mut()
-                    .filter(|((_, pos), _)| {
-                        // If chunk is not visible, there is no need to draw it.
-                        tilemap.visible_chunks.contains(pos)
-                    })
-                    .collect();
+                visible_chunks.extend(tilemap.visible_chunks.drain(..).map(|pos| (tilemap.entity, pos)));
+                tilemap_zs.insert(tilemap.entity, tilemap.transform.translation.z);
+                tilemap_image_handle_ids.insert(tilemap.entity, tilemap.image_handle_id);
+            }
 
-                sorted_chunks.sort_unstable_by(|((_, a), _), ((_, b), _)| a.z.cmp(&b.z));
+            let mut sorted_chunks: Vec<_> = tilemap_meta
+                .chunks
+                .iter_mut()
+                .filter(|(key, _)| {
+                    // If chunk is not visible, there is no need to draw it.
+                    visible_chunks.contains(key)
+                })
+                .map(|(key, chunk_meta)| {
+                    let (entity, _) = key;
+                    let tilemap_z = tilemap_zs.get(entity).unwrap();
 
-                // Render all chunks.
-                for (key, chunk_meta) in sorted_chunks.into_iter() {
-                    let batch = TilemapBatch {
-                        chunk_key: *key,
-                        image_handle_id: tilemap.image_handle_id,
-                    };
+                    (key, tilemap_z, chunk_meta)
+                })
+                .collect();
 
-                    let batch_entity = commands.spawn_bundle((batch,)).id();
+            sorted_chunks.sort_unstable_by(|((_, a), atz, _), ((_, b), btz, _)| match atz.partial_cmp(btz) {
+                Some(Ordering::Equal) | None => a.z.cmp(&b.z),
+                Some(other) => other,
+            });
 
-                    chunk_meta.vertices.write_buffer(&render_device, &render_queue);
-                    chunk_meta.tile_gpu_datas.write_buffer(&render_device, &render_queue);
+            // Render all chunks.
+            for (key, tilemap_z, chunk_meta) in sorted_chunks.into_iter() {
+                let (tilemap_entity, _) = key;
 
-                    chunk_meta.tile_gpu_data_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
-                        entries: &[BindGroupEntry {
-                            binding: 0,
-                            resource: BindingResource::Buffer(
-                                chunk_meta.tile_gpu_datas.buffer().unwrap().as_entire_buffer_binding(),
-                            ),
-                        }],
-                        label: Some("tilemap_tile_gpu_data_bind_group"),
-                        layout: &tilemap_pipeline.tile_gpu_data_layout,
-                    }));
+                let batch = TilemapBatch {
+                    chunk_key: *key,
+                    image_handle_id: *tilemap_image_handle_ids.get(tilemap_entity).unwrap(),
+                };
 
-                    // These items will be sorted by depth with other phase items
-                    let sort_key = FloatOrd(tilemap.transform.translation.z);
+                let batch_entity = commands.spawn_bundle((batch,)).id();
 
-                    let vertex_count = chunk_meta.vertices.len() as u32;
+                chunk_meta.vertices.write_buffer(&render_device, &render_queue);
+                chunk_meta.tile_gpu_datas.write_buffer(&render_device, &render_queue);
 
-                    transparent_phase.add(Transparent2d {
-                        draw_function: draw_tilemap_function,
-                        pipeline,
-                        entity: batch_entity,
-                        sort_key,
-                        batch_range: Some(0..vertex_count),
-                    });
-                }
+                chunk_meta.tile_gpu_data_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
+                    entries: &[BindGroupEntry {
+                        binding: 0,
+                        resource: BindingResource::Buffer(
+                            chunk_meta.tile_gpu_datas.buffer().unwrap().as_entire_buffer_binding(),
+                        ),
+                    }],
+                    label: Some("tilemap_tile_gpu_data_bind_group"),
+                    layout: &tilemap_pipeline.tile_gpu_data_layout,
+                }));
+
+                // These items will be sorted by depth with other phase items
+                let sort_key = FloatOrd(*tilemap_z);
+
+                let vertex_count = chunk_meta.vertices.len() as u32;
+
+                transparent_phase.add(Transparent2d {
+                    draw_function: draw_tilemap_function,
+                    pipeline,
+                    entity: batch_entity,
+                    sort_key,
+                    batch_range: Some(0..vertex_count),
+                });
             }
         }
     }

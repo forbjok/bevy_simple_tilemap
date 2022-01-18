@@ -8,6 +8,8 @@ use bevy_simple_tilemap::prelude::*;
 
 fn main() {
     App::new()
+        // Disable MSAA, as it produces weird rendering artifacts
+        .insert_resource(Msaa { samples: 1 })
         .add_plugins(DefaultPlugins)
         .add_plugin(SimpleTileMapPlugin)
         .add_system(update_tiles_system.system().with_run_criteria(FixedTimestep::step(0.5)))

@@ -7,7 +7,7 @@ use bevy::sprite::TextureAtlas;
 use bevy::transform::components::GlobalTransform;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::tilemap::{row_major_pos, CHUNK_HEIGHT, CHUNK_WIDTH};
+use crate::tilemap::{row_major_pos, Chunk, CHUNK_HEIGHT, CHUNK_WIDTH};
 use crate::TileMap;
 
 use super::*;
@@ -120,10 +120,13 @@ pub fn extract_tilemaps(
                 let chunk_pixel_size = Vec2::new(CHUNK_WIDTH as f32, CHUNK_HEIGHT as f32) * tile_size;
                 let chunk_pixel_size = chunk_pixel_size * transform.scale.truncate();
 
-                let chunks: Vec<ExtractedChunk> = tilemap
+                let chunks_changed_at = &mut extracted_tilemaps.chunks_changed_at;
+
+                // Exclude chunks that are not visible
+                let chunks: Vec<&Chunk> = tilemap
                     .chunks
                     .par_iter()
-                    .filter_map(|(_pos, chunk)| {
+                    .filter_map(|(_, chunk)| {
                         let chunk_translation =
                             (chunk.origin.truncate().as_vec2() * tile_size).extend(chunk.origin.z as f32);
                         let chunk_translation = transform.mul_vec3(chunk_translation);
@@ -137,6 +140,23 @@ pub fn extract_tilemaps(
                         if camera_rects.iter().all(|cr| !cr.is_intersecting(&chunk_rect)) {
                             // Chunk is outside the camera, skip it.
                             return None;
+                        }
+
+                        Some(chunk)
+                    })
+                    .collect();
+
+                let visible_chunks: Vec<IVec3> = chunks.iter().map(|c| c.origin).collect();
+
+                // Extract chunks
+                let chunks: Vec<ExtractedChunk> = chunks
+                    .par_iter()
+                    .filter_map(|chunk| {
+                        // If chunk has not changed since last extraction, skip it.
+                        if let Some(chunk_changed_at) = chunks_changed_at.get(&(entity, chunk.origin)) {
+                            if chunk.last_change_at <= *chunk_changed_at {
+                                return None;
+                            }
                         }
 
                         let tiles: Vec<ExtractedTile> = chunk
@@ -162,9 +182,15 @@ pub fn extract_tilemaps(
                         Some(ExtractedChunk {
                             origin: chunk.origin,
                             tiles,
+                            last_change_at: chunk.last_change_at,
                         })
                     })
                     .collect();
+
+                // Update chunk change timestamps
+                for ec in chunks.iter() {
+                    chunks_changed_at.insert((entity, ec.origin), ec.last_change_at);
+                }
 
                 extracted_tilemaps.tilemaps.push(ExtractedTilemap {
                     entity,
@@ -172,6 +198,7 @@ pub fn extract_tilemaps(
                     image_handle_id: texture_atlas.texture.id,
                     atlas_size: texture_atlas.size,
                     chunks,
+                    visible_chunks,
                 });
             }
         }

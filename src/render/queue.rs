@@ -226,6 +226,13 @@ pub fn queue_tilemaps(
 
                 // Render all chunks.
                 for (key, chunk_meta) in tilemap_meta.chunks.iter_mut() {
+                    let (_, pos) = key;
+
+                    // If chunk is not visible, don't bother to draw it.
+                    if !tilemap.visible_chunks.contains(pos) {
+                        continue;
+                    }
+
                     let batch = TilemapBatch {
                         chunk_key: *key,
                         image_handle_id: tilemap.image_handle_id,

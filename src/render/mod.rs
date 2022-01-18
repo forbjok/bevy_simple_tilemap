@@ -5,7 +5,7 @@ use bevy::{
     reflect::TypeUuid,
     render::render_resource::{BindGroup, BufferUsages, BufferVec},
     sprite::Rect,
-    utils::HashMap,
+    utils::{HashMap, Instant},
 };
 use bytemuck::{Pod, Zeroable};
 
@@ -28,6 +28,7 @@ pub struct ExtractedTile {
 pub struct ExtractedChunk {
     pub origin: IVec3,
     pub tiles: Vec<ExtractedTile>,
+    pub last_change_at: Instant,
 }
 
 pub struct ExtractedTilemap {
@@ -36,11 +37,13 @@ pub struct ExtractedTilemap {
     pub image_handle_id: HandleId,
     pub atlas_size: Vec2,
     pub chunks: Vec<ExtractedChunk>,
+    pub visible_chunks: Vec<IVec3>,
 }
 
 #[derive(Default)]
 pub struct ExtractedTilemaps {
     pub tilemaps: Vec<ExtractedTilemap>,
+    pub chunks_changed_at: HashMap<ChunkKey, Instant>,
 }
 
 #[derive(Default)]

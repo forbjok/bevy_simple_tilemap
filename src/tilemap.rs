@@ -2,7 +2,7 @@ use bitflags::bitflags;
 
 use bevy::{
     prelude::*,
-    utils::{HashMap, HashSet},
+    utils::{HashMap, HashSet, Instant},
 };
 
 pub(crate) const CHUNK_WIDTH: u32 = 64;
@@ -13,11 +13,11 @@ const CHUNK_WIDTH_USIZE: usize = CHUNK_WIDTH as usize;
 
 const TILES_PER_CHUNK: usize = (CHUNK_WIDTH * CHUNK_HEIGHT) as usize;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Chunk {
     pub origin: IVec3,
     pub tiles: Vec<Option<Tile>>,
-    pub needs_remesh: bool,
+    pub last_change_at: Instant,
 }
 
 bitflags! {
@@ -53,7 +53,7 @@ impl Chunk {
         Self {
             origin,
             tiles: vec![None; (CHUNK_WIDTH * CHUNK_HEIGHT) as usize],
-            ..Default::default()
+            last_change_at: Instant::now(),
         }
     }
 
@@ -62,7 +62,7 @@ impl Chunk {
             *tile = None;
         }
 
-        self.needs_remesh = true;
+        self.last_change_at = Instant::now();
     }
 
     fn set_tiles(&mut self, tiles: impl IntoIterator<Item = (IVec3, Option<Tile>)>) {
@@ -74,6 +74,8 @@ impl Chunk {
 
             self.tiles[index] = tile;
         }
+
+        self.last_change_at = Instant::now();
     }
 }
 
@@ -192,16 +194,12 @@ pub(crate) fn update_chunks_system(mut tilemap_query: Query<(&mut TileMap, &mut 
 
                 // Set tiles in chunk
                 chunk.set_tiles(tiles.drain(..));
-
-                // Mark chunk for remesh
-                chunk.needs_remesh = true;
             } else {
                 // Chunk does not exist yet, and needs to be spawned...
 
                 let chunk_origin = calc_chunk_origin(*chunk_pos);
 
                 let mut chunk = Chunk::new(chunk_origin);
-                chunk.needs_remesh = true;
 
                 // Set tiles in chunk
                 chunk.set_tiles(tiles.drain(..));

@@ -12,6 +12,13 @@ struct VertexOutput {
     [[builtin(position)]] position: vec4<f32>;
 };
 
+struct TilemapGpuData {
+    transform: mat4x4<f32>;
+};
+
+[[group(2), binding(0)]]
+var<uniform> tilemap: TilemapGpuData;
+
 struct Tile {
     color: u32;
 };
@@ -20,7 +27,7 @@ struct TileGpuData {
     tiles: array<Tile>;
 };
 
-[[group(2), binding(0)]]
+[[group(2), binding(1)]]
 var<storage, read> tile_gpu_data: TileGpuData;
 
 [[stage(vertex)]]
@@ -31,7 +38,7 @@ fn vertex(
 ) -> VertexOutput {
     var out: VertexOutput;
     out.uv = vertex_uv;
-    out.position = view.view_proj * vec4<f32>(vertex_position, 1.0);
+    out.position = view.view_proj * tilemap.transform * vec4<f32>(vertex_position, 1.0);
 
     var tile_index = vertex_index / 6u;
     var vertex_color = tile_gpu_data.tiles[tile_index].color;

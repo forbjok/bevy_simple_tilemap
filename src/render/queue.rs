@@ -88,7 +88,7 @@ pub fn queue_tilemaps(
             transparent_phase.items.reserve(tilemaps.len());
 
             let mut visible_chunks: Vec<(Entity, IVec3)> = Vec::new();
-            let mut tilemap_zs: HashMap<Entity, f32> = HashMap::default();
+            let mut tilemap_transforms: HashMap<Entity, GlobalTransform> = HashMap::default();
             let mut tilemap_image_handle_ids: HashMap<Entity, HandleId> = HashMap::default();
 
             for tilemap in tilemaps.iter_mut() {
@@ -184,12 +184,8 @@ pub fn queue_tilemaps(
                             let tile_pos = tile.pos.as_vec2() * quad_size; // TODO: Make work
 
                             // Apply size and global transform
-                            let positions = QUAD_VERTEX_POSITIONS.map(|quad_pos| {
-                                tilemap
-                                    .transform
-                                    .mul_vec3((tile_pos + (quad_pos * quad_size)).extend(z))
-                                    .into()
-                            });
+                            let positions = QUAD_VERTEX_POSITIONS
+                                .map(|quad_pos| (tile_pos + (quad_pos * quad_size)).extend(z).into());
 
                             // Store the vertex data and add the item to the render phase
                             let color = tile.color.as_linear_rgba_f32();
@@ -219,7 +215,7 @@ pub fn queue_tilemaps(
                 }
 
                 visible_chunks.extend(tilemap.visible_chunks.drain(..).map(|pos| (tilemap.entity, pos)));
-                tilemap_zs.insert(tilemap.entity, tilemap.transform.translation.z);
+                tilemap_transforms.insert(tilemap.entity, tilemap.transform);
                 tilemap_image_handle_ids.insert(tilemap.entity, tilemap.image_handle_id);
             }
 
@@ -232,19 +228,21 @@ pub fn queue_tilemaps(
                 })
                 .map(|(key, chunk_meta)| {
                     let (entity, _) = key;
-                    let tilemap_z = tilemap_zs.get(entity).unwrap();
+                    let tilemap_transform = tilemap_transforms.get(entity).unwrap();
 
-                    (key, tilemap_z, chunk_meta)
+                    (key, tilemap_transform, chunk_meta)
                 })
                 .collect();
 
-            sorted_chunks.sort_unstable_by(|((_, a), atz, _), ((_, b), btz, _)| match atz.partial_cmp(btz) {
-                Some(Ordering::Equal) | None => a.z.cmp(&b.z),
-                Some(other) => other,
+            sorted_chunks.sort_unstable_by(|((_, a), att, _), ((_, b), btt, _)| {
+                match att.translation.z.partial_cmp(&btt.translation.z) {
+                    Some(Ordering::Equal) | None => a.z.cmp(&b.z),
+                    Some(other) => other,
+                }
             });
 
             // Render all chunks.
-            for (key, tilemap_z, chunk_meta) in sorted_chunks.into_iter() {
+            for (key, tilemap_transform, chunk_meta) in sorted_chunks.into_iter() {
                 let (tilemap_entity, _) = key;
 
                 let batch = TilemapBatch {
@@ -254,22 +252,34 @@ pub fn queue_tilemaps(
 
                 let batch_entity = commands.spawn_bundle((batch,)).id();
 
-                chunk_meta.vertices.write_buffer(&render_device, &render_queue);
+                chunk_meta.tilemap_gpu_data.clear();
+                chunk_meta.tilemap_gpu_data.push(TilemapGpuData {
+                    transform: tilemap_transform.compute_matrix(),
+                });
+
+                chunk_meta.tilemap_gpu_data.write_buffer(&render_device, &render_queue);
                 chunk_meta.tile_gpu_datas.write_buffer(&render_device, &render_queue);
+                chunk_meta.vertices.write_buffer(&render_device, &render_queue);
 
                 chunk_meta.tile_gpu_data_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
-                    entries: &[BindGroupEntry {
-                        binding: 0,
-                        resource: BindingResource::Buffer(
-                            chunk_meta.tile_gpu_datas.buffer().unwrap().as_entire_buffer_binding(),
-                        ),
-                    }],
+                    entries: &[
+                        BindGroupEntry {
+                            binding: 0,
+                            resource: chunk_meta.tilemap_gpu_data.binding().unwrap(),
+                        },
+                        BindGroupEntry {
+                            binding: 1,
+                            resource: BindingResource::Buffer(
+                                chunk_meta.tile_gpu_datas.buffer().unwrap().as_entire_buffer_binding(),
+                            ),
+                        },
+                    ],
                     label: Some("tilemap_tile_gpu_data_bind_group"),
                     layout: &tilemap_pipeline.tile_gpu_data_layout,
                 }));
 
                 // These items will be sorted by depth with other phase items
-                let sort_key = FloatOrd(*tilemap_z);
+                let sort_key = FloatOrd(tilemap_transform.translation.z);
 
                 let vertex_count = chunk_meta.vertices.len() as u32;
 

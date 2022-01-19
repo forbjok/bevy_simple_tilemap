@@ -76,9 +76,7 @@ impl<const I: usize> EntityRenderCommand for SetTilemapTileGpuDataBindGroup<I> {
         let tilemap_batch = query_batch.get(item).unwrap();
         let chunk_meta = tilemap_meta.into_inner().chunks.get(&tilemap_batch.chunk_key).unwrap();
 
-        if let Some(bind_group) = chunk_meta.tile_gpu_data_bind_group.as_ref() {
-            pass.set_bind_group(I, bind_group, &[]);
-        }
+        pass.set_bind_group(I, chunk_meta.tile_gpu_data_bind_group.as_ref().unwrap(), &[0]);
 
         RenderCommandResult::Success
     }

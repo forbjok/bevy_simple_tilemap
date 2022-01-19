@@ -1,9 +1,9 @@
 use bevy::{
     asset::HandleId,
-    math::{IVec2, IVec3, Vec2},
+    math::{IVec2, IVec3, Mat4, Vec2},
     prelude::{AssetEvent, Color, Component, Entity, GlobalTransform, Handle, HandleUntyped, Image, Shader},
     reflect::TypeUuid,
-    render::render_resource::{BindGroup, BufferUsages, BufferVec},
+    render::render_resource::{std140::AsStd140, BindGroup, BufferUsages, BufferVec, DynamicUniformVec},
     sprite::Rect,
     utils::{HashMap, Instant},
 };
@@ -59,6 +59,12 @@ struct TilemapVertex {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone, Default, Pod, Zeroable, AsStd140)]
+pub struct TilemapGpuData {
+    pub transform: Mat4,
+}
+
+#[repr(C)]
 #[derive(Copy, Clone, Default, Pod, Zeroable)]
 pub struct TileGpuData {
     pub color: u32,
@@ -66,6 +72,7 @@ pub struct TileGpuData {
 
 pub struct ChunkMeta {
     vertices: BufferVec<TilemapVertex>,
+    tilemap_gpu_data: DynamicUniformVec<TilemapGpuData>,
     tile_gpu_datas: BufferVec<TileGpuData>,
     tile_gpu_data_bind_group: Option<BindGroup>,
 }
@@ -74,6 +81,7 @@ impl Default for ChunkMeta {
     fn default() -> Self {
         Self {
             vertices: BufferVec::new(BufferUsages::VERTEX),
+            tilemap_gpu_data: DynamicUniformVec::default(),
             tile_gpu_datas: BufferVec::new(BufferUsages::STORAGE),
             tile_gpu_data_bind_group: None,
         }
@@ -88,7 +96,7 @@ pub struct TilemapMeta {
     view_bind_group: Option<BindGroup>,
 }
 
-#[derive(Component, Eq, PartialEq, Copy, Clone)]
+#[derive(Component, PartialEq, Copy, Clone)]
 pub struct TilemapBatch {
     image_handle_id: HandleId,
     chunk_key: (Entity, IVec3),

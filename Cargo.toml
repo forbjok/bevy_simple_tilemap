@@ -15,15 +15,3 @@ bevy_derive = "0.6.0"
 bitflags = "1.3.2"
 bytemuck = "1.7.3"
 rayon = "1.5.1"
-
-[[example]]
-name = "benchmark"
-path = "examples/benchmark.rs"
-
-[[example]]
-name = "multilayer"
-path = "examples/multilayer.rs"
-
-[[example]]
-name = "simple"
-path = "examples/simple.rs"

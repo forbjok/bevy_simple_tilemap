@@ -14,6 +14,8 @@ use bevy::render::{
     texture::Image,
     view::ViewUniforms,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::TileFlags;
@@ -136,9 +138,13 @@ pub fn queue_tilemaps(
                     })
                     .collect();
 
+                #[cfg(target_arch = "wasm32")]
+                let chonk_iter = chonks.into_iter();
+                #[cfg(not(target_arch = "wasm32"))]
+                let chonk_iter = chonks.into_par_iter();
+
                 // Process extracted chunks in parallel, updating their metadata.
-                let results: Vec<(ChunkKey, ChunkMeta)> = chonks
-                    .into_par_iter()
+                let results: Vec<(ChunkKey, ChunkMeta)> = chonk_iter
                     .map(|(chunk, chunk_meta)| {
                         let (key, mut chunk_meta) = if let Some((key, chunk_meta)) = chunk_meta {
                             (key, chunk_meta)
@@ -147,7 +153,6 @@ pub fn queue_tilemaps(
                         };
 
                         chunk_meta.vertices.clear();
-                        chunk_meta.tile_gpu_datas.clear();
 
                         let z = chunk.origin.z as f32;
 
@@ -195,12 +200,11 @@ pub fn queue_tilemaps(
                                 | ((color[2] * 255.0) as u32) << 16
                                 | ((color[3] * 255.0) as u32) << 24;
 
-                            chunk_meta.tile_gpu_datas.push(TileGpuData { color });
-
                             for i in QUAD_INDICES.iter() {
                                 chunk_meta.vertices.push(TilemapVertex {
                                     position: positions[*i],
                                     uv: uvs[*i].into(),
+                                    color,
                                 });
                             }
                         }
@@ -258,24 +262,15 @@ pub fn queue_tilemaps(
                 });
 
                 chunk_meta.tilemap_gpu_data.write_buffer(&render_device, &render_queue);
-                chunk_meta.tile_gpu_datas.write_buffer(&render_device, &render_queue);
                 chunk_meta.vertices.write_buffer(&render_device, &render_queue);
 
-                chunk_meta.tile_gpu_data_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
-                    entries: &[
-                        BindGroupEntry {
-                            binding: 0,
-                            resource: chunk_meta.tilemap_gpu_data.binding().unwrap(),
-                        },
-                        BindGroupEntry {
-                            binding: 1,
-                            resource: BindingResource::Buffer(
-                                chunk_meta.tile_gpu_datas.buffer().unwrap().as_entire_buffer_binding(),
-                            ),
-                        },
-                    ],
-                    label: Some("tilemap_tile_gpu_data_bind_group"),
-                    layout: &tilemap_pipeline.tile_gpu_data_layout,
+                chunk_meta.tilemap_gpu_data_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
+                    entries: &[BindGroupEntry {
+                        binding: 0,
+                        resource: chunk_meta.tilemap_gpu_data.binding().unwrap(),
+                    }],
+                    label: Some("tilemap_gpu_data_bind_group"),
+                    layout: &tilemap_pipeline.tilemap_gpu_data_layout,
                 }));
 
                 // These items will be sorted by depth with other phase items

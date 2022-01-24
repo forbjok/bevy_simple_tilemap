@@ -5,6 +5,8 @@ use bevy::render::camera::ActiveCameras;
 use bevy::render::{texture::Image, view::ComputedVisibility, RenderWorld};
 use bevy::sprite::TextureAtlas;
 use bevy::transform::components::GlobalTransform;
+
+#[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use crate::tilemap::{row_major_pos, Chunk, CHUNK_HEIGHT, CHUNK_WIDTH};
@@ -122,10 +124,13 @@ pub fn extract_tilemaps(
 
                 let chunks_changed_at = &mut extracted_tilemaps.chunks_changed_at;
 
+                #[cfg(target_arch = "wasm32")]
+                let chunk_iter = tilemap.chunks.iter();
+                #[cfg(not(target_arch = "wasm32"))]
+                let chunk_iter = tilemap.chunks.par_iter();
+
                 // Exclude chunks that are not visible
-                let chunks: Vec<&Chunk> = tilemap
-                    .chunks
-                    .par_iter()
+                let chunks: Vec<&Chunk> = chunk_iter
                     .filter_map(|(_, chunk)| {
                         let chunk_translation =
                             (chunk.origin.truncate().as_vec2() * tile_size).extend(chunk.origin.z as f32);
@@ -148,9 +153,13 @@ pub fn extract_tilemaps(
 
                 let visible_chunks: Vec<IVec3> = chunks.iter().map(|c| c.origin).collect();
 
+                #[cfg(target_arch = "wasm32")]
+                let chunk_iter = chunks.iter();
+                #[cfg(not(target_arch = "wasm32"))]
+                let chunk_iter = chunks.par_iter();
+
                 // Extract chunks
-                let chunks: Vec<ExtractedChunk> = chunks
-                    .par_iter()
+                let chunks: Vec<ExtractedChunk> = chunk_iter
                     .filter_map(|chunk| {
                         // If chunk has not changed since last extraction, skip it.
                         if let Some(chunk_changed_at) = chunks_changed_at.get(&(entity, chunk.origin)) {
@@ -159,9 +168,12 @@ pub fn extract_tilemaps(
                             }
                         }
 
-                        let tiles: Vec<ExtractedTile> = chunk
-                            .tiles
-                            .par_iter()
+                        #[cfg(target_arch = "wasm32")]
+                        let tile_iter = chunk.tiles.iter();
+                        #[cfg(not(target_arch = "wasm32"))]
+                        let tile_iter = chunk.tiles.par_iter();
+
+                        let tiles: Vec<ExtractedTile> = tile_iter
                             .enumerate()
                             .filter_map(|(i, tile)| {
                                 if let Some(tile) = tile {

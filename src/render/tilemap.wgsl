@@ -19,29 +19,16 @@ struct TilemapGpuData {
 [[group(2), binding(0)]]
 var<uniform> tilemap: TilemapGpuData;
 
-struct Tile {
-    color: u32;
-};
-
-struct TileGpuData {
-    tiles: array<Tile>;
-};
-
-[[group(2), binding(1)]]
-var<storage, read> tile_gpu_data: TileGpuData;
-
 [[stage(vertex)]]
 fn vertex(
     [[builtin(vertex_index)]] vertex_index: u32,
     [[location(0)]] vertex_position: vec3<f32>,
     [[location(1)]] vertex_uv: vec2<f32>,
+    [[location(2)]] vertex_color: u32,
 ) -> VertexOutput {
     var out: VertexOutput;
     out.uv = vertex_uv;
     out.position = view.view_proj * tilemap.transform * vec4<f32>(vertex_position, 1.0);
-
-    var tile_index = vertex_index / 6u;
-    var vertex_color = tile_gpu_data.tiles[tile_index].color;
     out.color = vec4<f32>((vec4<u32>(vertex_color) >> vec4<u32>(0u, 8u, 16u, 24u)) & vec4<u32>(255u)) / 255.0;
 
     return out;

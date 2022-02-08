@@ -56,6 +56,7 @@ pub struct TilemapAssetEvents {
 struct TilemapVertex {
     pub position: [f32; 3],
     pub uv: [f32; 2],
+    pub color: u32,
 }
 
 #[repr(C)]
@@ -64,17 +65,10 @@ pub struct TilemapGpuData {
     pub transform: Mat4,
 }
 
-#[repr(C)]
-#[derive(Copy, Clone, Default, Pod, Zeroable)]
-pub struct TileGpuData {
-    pub color: u32,
-}
-
 pub struct ChunkMeta {
     vertices: BufferVec<TilemapVertex>,
     tilemap_gpu_data: DynamicUniformVec<TilemapGpuData>,
-    tile_gpu_datas: BufferVec<TileGpuData>,
-    tile_gpu_data_bind_group: Option<BindGroup>,
+    tilemap_gpu_data_bind_group: Option<BindGroup>,
 }
 
 impl Default for ChunkMeta {
@@ -82,8 +76,7 @@ impl Default for ChunkMeta {
         Self {
             vertices: BufferVec::new(BufferUsages::VERTEX),
             tilemap_gpu_data: DynamicUniformVec::default(),
-            tile_gpu_datas: BufferVec::new(BufferUsages::STORAGE),
-            tile_gpu_data_bind_group: None,
+            tilemap_gpu_data_bind_group: None,
         }
     }
 }

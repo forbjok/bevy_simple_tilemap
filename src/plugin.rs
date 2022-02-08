@@ -33,10 +33,7 @@ impl Plugin for SimpleTileMapPlugin {
             SimpleTileMapStage::Update,
             SystemStage::parallel(),
         )
-        .add_system_to_stage(
-            SimpleTileMapStage::Update,
-            crate::tilemap::update_chunks_system.system(),
-        );
+        .add_system_to_stage(SimpleTileMapStage::Update, crate::tilemap::update_chunks_system);
 
         let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
         let sprite_shader = Shader::from_wgsl(include_str!("render/tilemap.wgsl"));

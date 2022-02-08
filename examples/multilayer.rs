@@ -12,9 +12,9 @@ fn main() {
         .insert_resource(Msaa { samples: 1 })
         .add_plugins(DefaultPlugins)
         .add_plugin(SimpleTileMapPlugin)
-        .add_system(update_tiles_system.system().with_run_criteria(FixedTimestep::step(0.5)))
-        .add_system(input_system.system())
-        .add_startup_system(setup.system())
+        .add_system(update_tiles_system.with_run_criteria(FixedTimestep::step(0.5)))
+        .add_system(input_system)
+        .add_startup_system(setup)
         .run();
 }
 

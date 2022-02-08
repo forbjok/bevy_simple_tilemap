@@ -12,8 +12,8 @@ fn main() {
         .insert_resource(Msaa { samples: 1 })
         .add_plugins(DefaultPlugins)
         .add_plugin(SimpleTileMapPlugin)
-        .add_system(input_system.system())
-        .add_startup_system(setup.system())
+        .add_system(input_system)
+        .add_startup_system(setup)
         .run();
 }
 

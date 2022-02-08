@@ -13,18 +13,10 @@ fn main() {
         .insert_resource(Msaa { samples: 1 })
         .add_plugins(DefaultPlugins)
         .add_plugin(SimpleTileMapPlugin)
-        .add_system(
-            update_tiles1_system
-                .system()
-                .with_run_criteria(FixedTimestep::step(0.1)),
-        )
-        .add_system(
-            update_tiles2_system
-                .system()
-                .with_run_criteria(FixedTimestep::step(0.05)),
-        )
-        .add_system(input_system.system())
-        .add_startup_system(setup.system())
+        .add_system(update_tiles1_system.with_run_criteria(FixedTimestep::step(0.1)))
+        .add_system(update_tiles2_system.with_run_criteria(FixedTimestep::step(0.05)))
+        .add_system(input_system)
+        .add_startup_system(setup)
         .run();
 }
 

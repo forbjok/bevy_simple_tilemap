@@ -1,7 +1,7 @@
 use bevy::asset::{AssetEvent, Assets, Handle};
 use bevy::ecs::prelude::*;
 use bevy::prelude::*;
-use bevy::render::camera::ActiveCameras;
+use bevy::render::camera::{ActiveCamera, Camera2d};
 use bevy::render::{texture::Image, view::ComputedVisibility, RenderWorld};
 use bevy::sprite::TextureAtlas;
 use bevy::transform::components::GlobalTransform;
@@ -9,7 +9,7 @@ use bevy::transform::components::GlobalTransform;
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::tilemap::{row_major_pos, Chunk, CHUNK_HEIGHT, CHUNK_WIDTH};
+use crate::tilemap::{row_major_pos, CHUNK_HEIGHT, CHUNK_WIDTH};
 use crate::TileMap;
 
 use super::*;
@@ -47,8 +47,8 @@ pub fn extract_tilemaps(
         &Handle<TextureAtlas>,
     )>,
     windows: Res<Windows>,
-    active_cameras: Res<ActiveCameras>,
-    camera_transform_query: Query<&GlobalTransform, With<Camera>>,
+    active_camera: Res<ActiveCamera<Camera2d>>,
+    camera_transform_query: Query<&GlobalTransform, With<Camera2d>>,
 ) {
     enum Anchor {
         BottomLeft,
@@ -88,8 +88,8 @@ pub fn extract_tilemaps(
     let camera_rects = {
         let mut camera_rects: Vec<Rect> = Vec::with_capacity(3);
 
-        for active_camera_entity in active_cameras.iter().filter_map(|a| a.entity) {
-            if let Ok(camera_transform) = camera_transform_query.get(active_camera_entity) {
+        if let Some(camera_entity) = active_camera.get() {
+            if let Ok(camera_transform) = camera_transform_query.get(camera_entity) {
                 let camera_size = window_size * camera_transform.scale.truncate();
 
                 let camera_rect = Rect {
@@ -124,13 +124,10 @@ pub fn extract_tilemaps(
 
                 let chunks_changed_at = &mut extracted_tilemaps.chunks_changed_at;
 
-                #[cfg(target_arch = "wasm32")]
                 let chunk_iter = tilemap.chunks.iter();
-                #[cfg(not(target_arch = "wasm32"))]
-                let chunk_iter = tilemap.chunks.par_iter();
 
                 // Exclude chunks that are not visible
-                let chunks: Vec<&Chunk> = chunk_iter
+                let chunks: Vec<_> = chunk_iter
                     .filter_map(|(_, chunk)| {
                         let chunk_translation =
                             (chunk.origin.truncate().as_vec2() * tile_size).extend(chunk.origin.z as f32);

@@ -97,7 +97,7 @@ impl FromWorld for TilemapPipeline {
     }
 }
 
-impl SpecializedPipeline for TilemapPipeline {
+impl SpecializedRenderPipeline for TilemapPipeline {
     type Key = TilemapPipelineKey;
 
     fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {

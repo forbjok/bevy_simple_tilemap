@@ -3,7 +3,7 @@ use bevy::{
     prelude::*,
     render::{
         render_phase::AddRenderCommand,
-        render_resource::{Shader, SpecializedPipelines},
+        render_resource::{Shader, SpecializedRenderPipelines},
         RenderApp, RenderStage,
     },
 };
@@ -43,7 +43,7 @@ impl Plugin for SimpleTileMapPlugin {
             render_app
                 .init_resource::<ImageBindGroups>()
                 .init_resource::<TilemapPipeline>()
-                .init_resource::<SpecializedPipelines<TilemapPipeline>>()
+                .init_resource::<SpecializedRenderPipelines<TilemapPipeline>>()
                 .init_resource::<TilemapMeta>()
                 .init_resource::<ExtractedTilemaps>()
                 .init_resource::<TilemapAssetEvents>()

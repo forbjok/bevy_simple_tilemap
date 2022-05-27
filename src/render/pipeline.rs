@@ -101,33 +101,18 @@ impl SpecializedRenderPipeline for TilemapPipeline {
     type Key = TilemapPipelineKey;
 
     fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
-        let vertex_buffer_layout = {
-            let attributes = vec![
-                VertexAttribute {
-                    format: VertexFormat::Float32x3,
-                    offset: 0,
-                    shader_location: 0,
-                },
-                VertexAttribute {
-                    format: VertexFormat::Float32x2,
-                    offset: 12,
-                    shader_location: 1,
-                },
-                VertexAttribute {
-                    format: VertexFormat::Uint32,
-                    offset: 20,
-                    shader_location: 2,
-                },
-            ];
+        let vertex_formats = vec![
+            // Position
+            VertexFormat::Float32x3,
+            // UV
+            VertexFormat::Float32x2,
+            // Color
+            VertexFormat::Uint32,
+        ];
 
-            VertexBufferLayout {
-                array_stride: attributes.iter().map(|a| a.format.size()).sum(),
-                step_mode: VertexStepMode::Vertex,
-                attributes,
-            }
-        };
+        let vertex_buffer_layout = VertexBufferLayout::from_vertex_formats(VertexStepMode::Vertex, vertex_formats);
 
-        let shader_defs = Vec::new();
+        let shader_defs = vec![];
 
         RenderPipelineDescriptor {
             vertex: VertexState {

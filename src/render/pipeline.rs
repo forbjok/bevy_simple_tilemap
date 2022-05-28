@@ -61,7 +61,7 @@ impl FromWorld for TilemapPipeline {
                     ty: BindingType::Texture {
                         multisampled: false,
                         sample_type: TextureSampleType::Float { filterable: true },
-                        view_dimension: TextureViewDimension::D2,
+                        view_dimension: TextureViewDimension::D2Array,
                     },
                     count: None,
                 },
@@ -106,6 +106,8 @@ impl SpecializedRenderPipeline for TilemapPipeline {
             VertexFormat::Float32x3,
             // UV
             VertexFormat::Float32x2,
+            // Sprite index
+            VertexFormat::Sint32,
             // Color
             VertexFormat::Uint32,
         ];

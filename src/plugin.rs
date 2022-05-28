@@ -9,8 +9,8 @@ use bevy::{
 };
 
 use crate::render::{
-    self, draw::DrawTilemap, pipeline::TilemapPipeline, ExtractedTilemaps, ImageBindGroups, TilemapAssetEvents,
-    TilemapMeta, TILEMAP_SHADER_HANDLE,
+    self, draw::DrawTilemap, pipeline::TilemapPipeline, texture_array_cache::TextureArrayCache, ExtractedTilemaps,
+    ImageBindGroups, TilemapAssetEvents, TilemapMeta, TILEMAP_SHADER_HANDLE,
 };
 
 #[derive(Default)]
@@ -33,6 +33,7 @@ impl Plugin for SimpleTileMapPlugin {
             SimpleTileMapStage::Update,
             SystemStage::parallel(),
         )
+        .add_system(render::misc::set_texture_usages_system)
         .add_system_to_stage(SimpleTileMapStage::Update, crate::tilemap::update_chunks_system);
 
         let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
@@ -47,12 +48,14 @@ impl Plugin for SimpleTileMapPlugin {
                 .init_resource::<TilemapMeta>()
                 .init_resource::<ExtractedTilemaps>()
                 .init_resource::<TilemapAssetEvents>()
+                .init_resource::<TextureArrayCache>()
                 .add_render_command::<Transparent2d, DrawTilemap>()
                 .add_system_to_stage(
                     RenderStage::Extract,
                     render::extract::extract_tilemaps.label(TileMapSystem::ExtractTilemaps),
                 )
                 .add_system_to_stage(RenderStage::Extract, render::extract::extract_tilemap_events)
+                .add_system_to_stage(RenderStage::Prepare, render::prepare::prepare_textures)
                 .add_system_to_stage(RenderStage::Queue, render::queue::queue_tilemaps);
         };
     }

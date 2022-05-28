@@ -1,6 +1,6 @@
 use bevy::{
     core::FixedTimestep,
-    math::{ivec2, vec2},
+    math::{ivec2, uvec2},
     prelude::*,
     render::camera::{ActiveCamera, Camera2d},
 };
@@ -163,11 +163,9 @@ struct TileMap2 {
     level: i32,
 }
 
-fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atlases: ResMut<Assets<TextureAtlas>>) {
+fn setup(asset_server: Res<AssetServer>, mut commands: Commands) {
     // Load tilesheet texture and make a texture atlas from it
-    let texture_handle = asset_server.load("textures/tilesheet.png");
-    let texture_atlas = TextureAtlas::from_grid_with_padding(texture_handle, vec2(16.0, 16.0), 4, 1, vec2(1.0, 1.0));
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+    let texture = asset_server.load("textures/tilesheet.png");
 
     let mut tiles = Vec::new();
 
@@ -191,7 +189,7 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atl
 
         TileMapBundle {
             tilemap,
-            texture_atlas: texture_atlas_handle.clone(),
+            texture: texture.clone(),
             transform: Transform {
                 scale: Vec3::splat(3.0),
                 translation: Vec3::new(-500.0, -(16.0 * 3.0 * 10.0 / 2.0), 0.0),
@@ -202,12 +200,12 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atl
     };
 
     let tilemap_bundle2 = {
-        let mut tilemap = TileMap::default();
+        let mut tilemap = TileMap::new(uvec2(16, 16), UVec2::splat(1));
         tilemap.set_tiles(tiles);
 
         TileMapBundle {
             tilemap,
-            texture_atlas: texture_atlas_handle.clone(),
+            texture,
             transform: Transform {
                 scale: Vec3::splat(3.0),
                 translation: Vec3::new(60.0, -(16.0 * 3.0 * 10.0 / 2.0), 0.0),

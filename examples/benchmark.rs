@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use bevy::{
-    math::vec2,
+    math::uvec2,
     prelude::*,
     render::camera::{ActiveCamera, Camera2d},
 };
@@ -96,15 +96,14 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<u32>) {
     }
 }
 
-fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atlases: ResMut<Assets<TextureAtlas>>) {
+fn setup(asset_server: Res<AssetServer>, mut commands: Commands) {
     // Load tilesheet texture and make a texture atlas from it
-    let texture_handle = asset_server.load("textures/tilesheet.png");
-    let texture_atlas = TextureAtlas::from_grid_with_padding(texture_handle, vec2(16.0, 16.0), 4, 1, vec2(1.0, 1.0));
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+    let texture = asset_server.load("textures/tilesheet.png");
 
     // Set up tilemap
     let tilemap_bundle = TileMapBundle {
-        texture_atlas: texture_atlas_handle.clone(),
+        tilemap: TileMap::new(uvec2(16, 16), UVec2::splat(1)),
+        texture,
         transform: Transform {
             scale: Vec3::splat(1.0),
             translation: Vec3::new(-640.0, -360.0, 0.0),

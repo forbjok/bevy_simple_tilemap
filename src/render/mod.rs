@@ -1,10 +1,9 @@
 use bevy::{
     asset::HandleId,
-    math::{IVec2, IVec3, Mat4, Vec2},
+    math::{IVec2, IVec3, Mat4, UVec2},
     prelude::{AssetEvent, Color, Component, Entity, GlobalTransform, Handle, HandleUntyped, Image, Shader},
     reflect::TypeUuid,
     render::render_resource::{std140::AsStd140, BindGroup, BufferUsages, BufferVec, DynamicUniformVec},
-    sprite::Rect,
     utils::{HashMap, Instant},
 };
 use bytemuck::{Pod, Zeroable};
@@ -13,14 +12,17 @@ use crate::TileFlags;
 
 pub mod draw;
 pub mod extract;
+pub mod misc;
 pub mod pipeline;
+pub mod prepare;
 pub mod queue;
+pub mod texture_array_cache;
 
 pub const TILEMAP_SHADER_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 9765236402292098257);
 
 pub struct ExtractedTile {
     pub pos: IVec2,
-    pub rect: Rect,
+    pub index: u32,
     pub color: Color,
     pub flags: TileFlags,
 }
@@ -33,9 +35,11 @@ pub struct ExtractedChunk {
 
 pub struct ExtractedTilemap {
     pub entity: Entity,
+    pub tile_size: UVec2,
+    pub texture_size: UVec2,
+    pub padding: UVec2,
     pub transform: GlobalTransform,
-    pub image_handle_id: HandleId,
-    pub atlas_size: Vec2,
+    pub texture: Handle<Image>,
     pub chunks: Vec<ExtractedChunk>,
     pub visible_chunks: Vec<IVec3>,
 }
@@ -56,6 +60,7 @@ pub struct TilemapAssetEvents {
 struct TilemapVertex {
     pub position: [f32; 3],
     pub uv: [f32; 2],
+    pub sprite_index: i32,
     pub color: u32,
 }
 

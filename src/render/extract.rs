@@ -1,9 +1,9 @@
 use bevy::asset::{AssetEvent, Assets, Handle};
 use bevy::ecs::prelude::*;
+use bevy::math::uvec2;
 use bevy::prelude::*;
 use bevy::render::camera::{ActiveCamera, Camera2d};
-use bevy::render::{texture::Image, view::ComputedVisibility, RenderWorld};
-use bevy::sprite::TextureAtlas;
+use bevy::render::{render_resource::TextureUsages, texture::Image, view::ComputedVisibility, RenderWorld};
 use bevy::transform::components::GlobalTransform;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -38,14 +38,7 @@ pub fn extract_tilemap_events(mut render_world: ResMut<RenderWorld>, mut image_e
 pub fn extract_tilemaps(
     mut render_world: ResMut<RenderWorld>,
     images: Res<Assets<Image>>,
-    texture_atlases: Res<Assets<TextureAtlas>>,
-    tilemap_query: Query<(
-        Entity,
-        &ComputedVisibility,
-        &TileMap,
-        &GlobalTransform,
-        &Handle<TextureAtlas>,
-    )>,
+    tilemap_query: Query<(Entity, &ComputedVisibility, &TileMap, &GlobalTransform, &Handle<Image>)>,
     windows: Res<Windows>,
     active_camera: Res<ActiveCamera<Camera2d>>,
     camera_transform_query: Query<&GlobalTransform, With<Camera2d>>,
@@ -107,109 +100,109 @@ pub fn extract_tilemaps(
 
     let mut extracted_tilemaps = render_world.get_resource_mut::<ExtractedTilemaps>().unwrap();
     extracted_tilemaps.tilemaps.clear();
-    for (entity, computed_visibility, tilemap, transform, texture_atlas_handle) in tilemap_query.iter() {
+    for (entity, computed_visibility, tilemap, transform, texture) in tilemap_query.iter() {
         if !computed_visibility.is_visible {
             continue;
         }
 
-        if let Some(texture_atlas) = texture_atlases.get(texture_atlas_handle) {
-            if images.contains(&texture_atlas.texture) {
-                // Determine tile size in pixels from first sprite in TextureAtlas.
-                // It is assumed and mandated that all sprites in the sprite sheet are the same size.
-                let tile0_tex = texture_atlas.textures.get(0).unwrap();
-                let tile_size = Vec2::new(tile0_tex.width(), tile0_tex.height());
+        if let Some(image) = images.get(texture) {
+            if !image.texture_descriptor.usage.contains(TextureUsages::COPY_SRC) {
+                continue;
+            }
 
-                let chunk_pixel_size = Vec2::new(CHUNK_WIDTH as f32, CHUNK_HEIGHT as f32) * tile_size;
-                let chunk_pixel_size = chunk_pixel_size * transform.scale.truncate();
+            let texture_size = uvec2(
+                image.texture_descriptor.size.width,
+                image.texture_descriptor.size.height,
+            );
 
-                let chunks_changed_at = &mut extracted_tilemaps.chunks_changed_at;
+            let tile_size = tilemap.tile_size;
 
-                let chunk_iter = tilemap.chunks.iter();
+            let chunk_pixel_size = uvec2(CHUNK_WIDTH, CHUNK_HEIGHT) * tile_size;
+            let chunk_pixel_size = chunk_pixel_size.as_vec2() * transform.scale.truncate();
 
-                // Exclude chunks that are not visible
-                let chunks: Vec<_> = chunk_iter
-                    .filter_map(|(_, chunk)| {
-                        let chunk_translation =
-                            (chunk.origin.truncate().as_vec2() * tile_size).extend(chunk.origin.z as f32);
-                        let chunk_translation = transform.mul_vec3(chunk_translation);
+            let chunks_changed_at = &mut extracted_tilemaps.chunks_changed_at;
 
-                        let chunk_rect = Rect {
-                            anchor: Anchor::BottomLeft,
-                            position: chunk_translation.truncate(),
-                            size: chunk_pixel_size,
-                        };
+            let chunk_iter = tilemap.chunks.iter();
 
-                        if camera_rects.iter().all(|cr| !cr.is_intersecting(&chunk_rect)) {
-                            // Chunk is outside the camera, skip it.
+            // Exclude chunks that are not visible
+            let chunks: Vec<_> = chunk_iter
+                .filter_map(|(_, chunk)| {
+                    let chunk_translation =
+                        (chunk.origin.truncate().as_vec2() * tile_size.as_vec2()).extend(chunk.origin.z as f32);
+                    let chunk_translation = transform.mul_vec3(chunk_translation);
+
+                    let chunk_rect = Rect {
+                        anchor: Anchor::BottomLeft,
+                        position: chunk_translation.truncate(),
+                        size: chunk_pixel_size,
+                    };
+
+                    if camera_rects.iter().all(|cr| !cr.is_intersecting(&chunk_rect)) {
+                        // Chunk is outside the camera, skip it.
+                        return None;
+                    }
+
+                    Some(chunk)
+                })
+                .collect();
+
+            let visible_chunks: Vec<IVec3> = chunks.iter().map(|c| c.origin).collect();
+
+            #[cfg(target_arch = "wasm32")]
+            let chunk_iter = chunks.iter();
+            #[cfg(not(target_arch = "wasm32"))]
+            let chunk_iter = chunks.par_iter();
+
+            // Extract chunks
+            let chunks: Vec<ExtractedChunk> = chunk_iter
+                .filter_map(|chunk| {
+                    // If chunk has not changed since last extraction, skip it.
+                    if let Some(chunk_changed_at) = chunks_changed_at.get(&(entity, chunk.origin)) {
+                        if chunk.last_change_at <= *chunk_changed_at {
                             return None;
                         }
+                    }
 
-                        Some(chunk)
-                    })
-                    .collect();
+                    #[cfg(target_arch = "wasm32")]
+                    let tile_iter = chunk.tiles.iter();
+                    #[cfg(not(target_arch = "wasm32"))]
+                    let tile_iter = chunk.tiles.par_iter();
 
-                let visible_chunks: Vec<IVec3> = chunks.iter().map(|c| c.origin).collect();
-
-                #[cfg(target_arch = "wasm32")]
-                let chunk_iter = chunks.iter();
-                #[cfg(not(target_arch = "wasm32"))]
-                let chunk_iter = chunks.par_iter();
-
-                // Extract chunks
-                let chunks: Vec<ExtractedChunk> = chunk_iter
-                    .filter_map(|chunk| {
-                        // If chunk has not changed since last extraction, skip it.
-                        if let Some(chunk_changed_at) = chunks_changed_at.get(&(entity, chunk.origin)) {
-                            if chunk.last_change_at <= *chunk_changed_at {
-                                return None;
-                            }
-                        }
-
-                        #[cfg(target_arch = "wasm32")]
-                        let tile_iter = chunk.tiles.iter();
-                        #[cfg(not(target_arch = "wasm32"))]
-                        let tile_iter = chunk.tiles.par_iter();
-
-                        let tiles: Vec<ExtractedTile> = tile_iter
-                            .enumerate()
-                            .filter_map(|(i, tile)| {
-                                if let Some(tile) = tile {
-                                    let rect = texture_atlas.textures[tile.sprite_index as usize];
-
-                                    Some(ExtractedTile {
-                                        pos: chunk.origin.truncate() + row_major_pos(i),
-                                        rect,
-                                        color: tile.color,
-                                        flags: tile.flags,
-                                    })
-                                } else {
-                                    None
-                                }
+                    let tiles: Vec<ExtractedTile> = tile_iter
+                        .enumerate()
+                        .filter_map(|(i, tile)| {
+                            tile.as_ref().map(|tile| ExtractedTile {
+                                pos: chunk.origin.truncate() + row_major_pos(i),
+                                index: tile.sprite_index,
+                                color: tile.color,
+                                flags: tile.flags,
                             })
-                            .collect();
-
-                        Some(ExtractedChunk {
-                            origin: chunk.origin,
-                            tiles,
-                            last_change_at: chunk.last_change_at,
                         })
+                        .collect();
+
+                    Some(ExtractedChunk {
+                        origin: chunk.origin,
+                        tiles,
+                        last_change_at: chunk.last_change_at,
                     })
-                    .collect();
+                })
+                .collect();
 
-                // Update chunk change timestamps
-                for ec in chunks.iter() {
-                    chunks_changed_at.insert((entity, ec.origin), ec.last_change_at);
-                }
-
-                extracted_tilemaps.tilemaps.push(ExtractedTilemap {
-                    entity,
-                    transform: *transform,
-                    image_handle_id: texture_atlas.texture.id,
-                    atlas_size: texture_atlas.size,
-                    chunks,
-                    visible_chunks,
-                });
+            // Update chunk change timestamps
+            for ec in chunks.iter() {
+                chunks_changed_at.insert((entity, ec.origin), ec.last_change_at);
             }
+
+            extracted_tilemaps.tilemaps.push(ExtractedTilemap {
+                entity,
+                tile_size,
+                texture_size,
+                padding: tilemap.padding,
+                transform: *transform,
+                texture: texture.clone(),
+                chunks,
+                visible_chunks,
+            });
         }
     }
 }

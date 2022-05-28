@@ -37,6 +37,8 @@ pub struct Tile {
 
 #[derive(Component, Default)]
 pub struct TileMap {
+    pub tile_size: UVec2,
+    pub padding: UVec2,
     pub chunks: HashMap<IVec3, Chunk>,
     tile_changes: Vec<(IVec3, Option<Tile>)>,
     clear_all: bool,
@@ -80,6 +82,17 @@ impl Chunk {
 }
 
 impl TileMap {
+    pub fn new(tile_size: UVec2, padding: UVec2) -> Self {
+        Self {
+            tile_size,
+            padding,
+            chunks: HashMap::default(),
+            tile_changes: Vec::new(),
+            clear_all: false,
+            clear_layers: HashSet::default(),
+        }
+    }
+
     pub fn clear(&mut self) {
         // Clear change queue
         self.tile_changes.clear();

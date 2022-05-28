@@ -50,14 +50,12 @@ impl<const I: usize> EntityRenderCommand for SetTilemapTextureBindGroup<I> {
         let tilemap_batch = query_batch.get(item).unwrap();
         let image_bind_groups = image_bind_groups.into_inner();
 
-        pass.set_bind_group(
-            I,
-            image_bind_groups
-                .values
-                .get(&Handle::weak(tilemap_batch.image_handle_id))
-                .unwrap(),
-            &[],
-        );
+        let bind_group = image_bind_groups
+            .values
+            .get(&Handle::weak(tilemap_batch.image_handle_id))
+            .unwrap();
+
+        pass.set_bind_group(I, bind_group, &[]);
 
         RenderCommandResult::Success
     }

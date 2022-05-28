@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use bevy::asset::{AssetEvent, Handle};
+use bevy::asset::AssetEvent;
 use bevy::core::FloatOrd;
 use bevy::core_pipeline::Transparent2d;
 use bevy::ecs::prelude::*;
@@ -22,6 +22,7 @@ use crate::TileFlags;
 
 use super::draw::DrawTilemap;
 use super::pipeline::{TilemapPipeline, TilemapPipelineKey};
+use super::texture_array_cache::TextureArrayCache;
 use super::*;
 
 const QUAD_INDICES: [usize; 6] = [0, 2, 3, 0, 1, 2];
@@ -57,6 +58,7 @@ pub fn queue_tilemaps(
     mut extracted_tilemaps: ResMut<ExtractedTilemaps>,
     mut views: Query<&mut RenderPhase<Transparent2d>>,
     events: Res<TilemapAssetEvents>,
+    mut texture_array_cache: ResMut<TextureArrayCache>,
 ) {
     // If an image has changed, the GpuImage has (probably) changed
     for event in &events.images {
@@ -66,6 +68,8 @@ pub fn queue_tilemaps(
             AssetEvent::Removed { handle } => image_bind_groups.values.remove(handle),
         };
     }
+
+    texture_array_cache.queue(&render_device, &render_queue, &gpu_images);
 
     if let Some(view_binding) = view_uniforms.uniforms.binding() {
         let tilemap_meta = &mut tilemap_meta;
@@ -91,38 +95,37 @@ pub fn queue_tilemaps(
 
             let mut visible_chunks: Vec<(Entity, IVec3)> = Vec::new();
             let mut tilemap_transforms: HashMap<Entity, GlobalTransform> = HashMap::default();
-            let mut tilemap_image_handle_ids: HashMap<Entity, HandleId> = HashMap::default();
+            let mut tilemap_texture_ids: HashMap<Entity, HandleId> = HashMap::default();
 
             for tilemap in tilemaps.iter_mut() {
-                let image_size;
+                let quad_size = tilemap.tile_size.as_vec2();
 
                 // Set-up a new possible batch
-                if let Some(gpu_image) = gpu_images.get(&Handle::weak(tilemap.image_handle_id)) {
-                    image_size = Vec2::new(gpu_image.size.width, gpu_image.size.height);
-
-                    image_bind_groups
-                        .values
-                        .entry(Handle::weak(tilemap.image_handle_id))
-                        .or_insert_with(|| {
-                            render_device.create_bind_group(&BindGroupDescriptor {
-                                entries: &[
-                                    BindGroupEntry {
-                                        binding: 0,
-                                        resource: BindingResource::TextureView(&gpu_image.texture_view),
-                                    },
-                                    BindGroupEntry {
-                                        binding: 1,
-                                        resource: BindingResource::Sampler(&gpu_image.sampler),
-                                    },
-                                ],
-                                label: Some("tilemap_material_bind_group"),
-                                layout: &tilemap_pipeline.material_layout,
-                            })
-                        });
-                } else {
-                    // Skip this item if the texture is not ready
+                if !texture_array_cache.contains(&tilemap.texture) {
                     continue;
                 }
+
+                image_bind_groups
+                    .values
+                    .entry(tilemap.texture.clone_weak())
+                    .or_insert_with(|| {
+                        let gpu_image = texture_array_cache.get(&tilemap.texture);
+
+                        render_device.create_bind_group(&BindGroupDescriptor {
+                            entries: &[
+                                BindGroupEntry {
+                                    binding: 0,
+                                    resource: BindingResource::TextureView(&gpu_image.texture_view),
+                                },
+                                BindGroupEntry {
+                                    binding: 1,
+                                    resource: BindingResource::Sampler(&gpu_image.sampler),
+                                },
+                            ],
+                            label: Some("tilemap_material_bind_group"),
+                            layout: &tilemap_pipeline.material_layout,
+                        })
+                    });
 
                 // Yank each chunk's GPU metadata (if one exists) out of the HashMap
                 // so that we can pass it into the parallel iterator later.
@@ -169,24 +172,7 @@ pub fn queue_tilemaps(
                                 uvs = [uvs[3], uvs[2], uvs[1], uvs[0]];
                             }
 
-                            // By default, the size of the quad is the size of the texture
-                            //let mut quad_size = image_size;
-
-                            // If a rect is specified, adjust UVs and the size of the quad
-                            let rect = tile.rect;
-                            let rect_size = rect.size();
-                            for uv in &mut uvs {
-                                *uv = (rect.min + *uv * rect_size) / image_size;
-                            }
-
-                            let quad_size = rect_size;
-
-                            // Override the size if a custom one is specified
-                            //if let Some(custom_size) = extracted_sprite.custom_size {
-                            //    quad_size = custom_size;
-                            //}
-
-                            let tile_pos = tile.pos.as_vec2() * quad_size; // TODO: Make work
+                            let tile_pos = tile.pos.as_vec2() * quad_size;
 
                             // Apply size and global transform
                             let positions = QUAD_VERTEX_POSITIONS
@@ -204,6 +190,7 @@ pub fn queue_tilemaps(
                                 chunk_meta.vertices.push(TilemapVertex {
                                     position: positions[*i],
                                     uv: uvs[*i].into(),
+                                    sprite_index: tile.index as i32,
                                     color,
                                 });
                             }
@@ -220,7 +207,7 @@ pub fn queue_tilemaps(
 
                 visible_chunks.extend(tilemap.visible_chunks.drain(..).map(|pos| (tilemap.entity, pos)));
                 tilemap_transforms.insert(tilemap.entity, tilemap.transform);
-                tilemap_image_handle_ids.insert(tilemap.entity, tilemap.image_handle_id);
+                tilemap_texture_ids.insert(tilemap.entity, tilemap.texture.id);
             }
 
             let mut sorted_chunks: Vec<_> = tilemap_meta
@@ -251,7 +238,7 @@ pub fn queue_tilemaps(
 
                 let batch = TilemapBatch {
                     chunk_key: *key,
-                    image_handle_id: *tilemap_image_handle_ids.get(tilemap_entity).unwrap(),
+                    image_handle_id: *tilemap_texture_ids.get(tilemap_entity).unwrap(),
                 };
 
                 let batch_entity = commands.spawn_bundle((batch,)).id();

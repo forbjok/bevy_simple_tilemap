@@ -1,6 +1,6 @@
 use bevy::ecs::prelude::*;
-use bevy::render::render_resource::std140::AsStd140;
-use bevy::render::{render_resource::*, renderer::RenderDevice, texture::BevyDefault, view::ViewUniform};
+use bevy::render::view::ViewUniform;
+use bevy::render::{render_resource::*, renderer::RenderDevice, texture::BevyDefault};
 
 use super::*;
 
@@ -46,7 +46,7 @@ impl FromWorld for TilemapPipeline {
                 ty: BindingType::Buffer {
                     ty: BufferBindingType::Uniform,
                     has_dynamic_offset: true,
-                    min_binding_size: BufferSize::new(ViewUniform::std140_size_static() as u64),
+                    min_binding_size: Some(ViewUniform::min_size()),
                 },
                 count: None,
             }],
@@ -82,7 +82,7 @@ impl FromWorld for TilemapPipeline {
                 ty: BindingType::Buffer {
                     ty: BufferBindingType::Uniform,
                     has_dynamic_offset: true,
-                    min_binding_size: BufferSize::new(TilemapGpuData::std140_size_static() as u64),
+                    min_binding_size: Some(TilemapGpuData::min_size()),
                 },
                 count: None,
             }],

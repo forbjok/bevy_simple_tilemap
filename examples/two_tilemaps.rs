@@ -1,8 +1,8 @@
 use bevy::{
-    core::FixedTimestep,
     math::{ivec2, vec2},
     prelude::*,
     render::camera::{ActiveCamera, Camera2d},
+    time::FixedTimestep,
 };
 
 use bevy_simple_tilemap::prelude::*;
@@ -166,7 +166,8 @@ struct TileMap2 {
 fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atlases: ResMut<Assets<TextureAtlas>>) {
     // Load tilesheet texture and make a texture atlas from it
     let texture_handle = asset_server.load("textures/tilesheet.png");
-    let texture_atlas = TextureAtlas::from_grid_with_padding(texture_handle, vec2(16.0, 16.0), 4, 1, vec2(1.0, 1.0));
+    let texture_atlas =
+        TextureAtlas::from_grid_with_padding(texture_handle, vec2(16.0, 16.0), 4, 1, vec2(1.0, 1.0), Vec2::ZERO);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     let mut tiles = Vec::new();

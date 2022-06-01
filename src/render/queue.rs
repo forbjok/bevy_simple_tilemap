@@ -1,7 +1,6 @@
 use std::cmp::Ordering;
 
 use bevy::asset::{AssetEvent, Handle};
-use bevy::core::FloatOrd;
 use bevy::core_pipeline::Transparent2d;
 use bevy::ecs::prelude::*;
 use bevy::math::{const_vec2, Vec2};
@@ -14,6 +13,8 @@ use bevy::render::{
     texture::Image,
     view::ViewUniforms,
 };
+
+use bevy::utils::FloatOrd;
 
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -98,7 +99,7 @@ pub fn queue_tilemaps(
 
                 // Set-up a new possible batch
                 if let Some(gpu_image) = gpu_images.get(&Handle::weak(tilemap.image_handle_id)) {
-                    image_size = Vec2::new(gpu_image.size.width, gpu_image.size.height);
+                    image_size = gpu_image.size;
 
                     image_bind_groups
                         .values

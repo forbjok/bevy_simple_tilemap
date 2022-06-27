@@ -4,7 +4,7 @@ use bevy::asset::{AssetEvent, Handle};
 use bevy::core::FloatOrd;
 use bevy::core_pipeline::Transparent2d;
 use bevy::ecs::prelude::*;
-use bevy::math::{const_vec2, Vec2};
+use bevy::math::{const_vec2, vec2, Vec2};
 use bevy::prelude::*;
 use bevy::render::{
     render_asset::RenderAssets,
@@ -156,10 +156,27 @@ pub fn queue_tilemaps(
 
                         let z = chunk.origin.z as f32;
 
+                        let tile_size = chunk.tiles[0].rect.size();
+
+                        let half_pixel_x = 0.5 / tile_size.x;
+                        let half_pixel_y = 0.5 / tile_size.y;
+
+                        // Adjust UVs to cut off 0.5 pixel on each side
+                        // in order to avoid pixels bleeding in from
+                        // adjacent sprites in the texture atlas.
+                        let quad_uvs: [Vec2; 4] = [
+                            QUAD_UVS[0] + vec2(half_pixel_x, -half_pixel_y),
+                            QUAD_UVS[1] + vec2(-half_pixel_x, -half_pixel_y),
+                            QUAD_UVS[2] + vec2(-half_pixel_x, half_pixel_y),
+                            QUAD_UVS[3] + vec2(half_pixel_x, half_pixel_y),
+                        ];
+
                         for tile in chunk.tiles.iter() {
                             // Calculate vertex data for this item
 
-                            let mut uvs = QUAD_UVS;
+                            let rect = tile.rect;
+
+                            let mut uvs = quad_uvs;
 
                             if tile.flags.contains(TileFlags::FLIP_X) {
                                 uvs = [uvs[1], uvs[0], uvs[3], uvs[2]];
@@ -169,28 +186,15 @@ pub fn queue_tilemaps(
                                 uvs = [uvs[3], uvs[2], uvs[1], uvs[0]];
                             }
 
-                            // By default, the size of the quad is the size of the texture
-                            //let mut quad_size = image_size;
-
-                            // If a rect is specified, adjust UVs and the size of the quad
-                            let rect = tile.rect;
-                            let rect_size = rect.size();
                             for uv in &mut uvs {
-                                *uv = (rect.min + *uv * rect_size) / image_size;
+                                *uv = (rect.min + *uv * tile_size) / image_size;
                             }
 
-                            let quad_size = rect_size;
-
-                            // Override the size if a custom one is specified
-                            //if let Some(custom_size) = extracted_sprite.custom_size {
-                            //    quad_size = custom_size;
-                            //}
-
-                            let tile_pos = tile.pos.as_vec2() * quad_size; // TODO: Make work
+                            let tile_pos = tile.pos.as_vec2() * tile_size;
 
                             // Apply size and global transform
                             let positions = QUAD_VERTEX_POSITIONS
-                                .map(|quad_pos| (tile_pos + (quad_pos * quad_size)).extend(z).into());
+                                .map(|quad_pos| (tile_pos + (quad_pos * tile_size)).extend(z).into());
 
                             // Store the vertex data and add the item to the render phase
                             let color = tile.color.as_linear_rgba_f32();

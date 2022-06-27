@@ -27,6 +27,7 @@ pub struct ExtractedTile {
 
 pub struct ExtractedChunk {
     pub origin: IVec3,
+    pub tile_size: Vec2,
     pub tiles: Vec<ExtractedTile>,
     pub last_change_at: Instant,
 }
@@ -56,6 +57,7 @@ pub struct TilemapAssetEvents {
 struct TilemapVertex {
     pub position: [f32; 3],
     pub uv: [f32; 2],
+    pub tile_uv: [f32; 2],
     pub color: u32,
 }
 
@@ -63,12 +65,16 @@ struct TilemapVertex {
 #[derive(Copy, Clone, Default, Pod, Zeroable, AsStd140)]
 pub struct TilemapGpuData {
     pub transform: Mat4,
+    pub tile_size: Vec2,
+    pub texture_size: Vec2,
 }
 
 pub struct ChunkMeta {
     vertices: BufferVec<TilemapVertex>,
     tilemap_gpu_data: DynamicUniformVec<TilemapGpuData>,
     tilemap_gpu_data_bind_group: Option<BindGroup>,
+    texture_size: Vec2,
+    tile_size: Vec2,
 }
 
 impl Default for ChunkMeta {
@@ -77,6 +83,8 @@ impl Default for ChunkMeta {
             vertices: BufferVec::new(BufferUsages::VERTEX),
             tilemap_gpu_data: DynamicUniformVec::default(),
             tilemap_gpu_data_bind_group: None,
+            texture_size: Vec2::ZERO,
+            tile_size: Vec2::ZERO,
         }
     }
 }

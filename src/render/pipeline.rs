@@ -78,7 +78,7 @@ impl FromWorld for TilemapPipeline {
         let tilemap_gpu_data_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[BindGroupLayoutEntry {
                 binding: 0,
-                visibility: ShaderStages::VERTEX,
+                visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                 ty: BindingType::Buffer {
                     ty: BufferBindingType::Uniform,
                     has_dynamic_offset: true,
@@ -105,6 +105,8 @@ impl SpecializedRenderPipeline for TilemapPipeline {
             // Position
             VertexFormat::Float32x3,
             // UV
+            VertexFormat::Float32x2,
+            // Tile UV
             VertexFormat::Float32x2,
             // Color
             VertexFormat::Uint32,

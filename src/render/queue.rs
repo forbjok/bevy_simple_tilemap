@@ -152,6 +152,8 @@ pub fn queue_tilemaps(
                             ((tilemap.entity, chunk.origin), ChunkMeta::default())
                         };
 
+                        chunk_meta.tile_size = chunk.tile_size;
+                        chunk_meta.texture_size = image_size;
                         chunk_meta.vertices.clear();
 
                         let z = chunk.origin.z as f32;
@@ -168,6 +170,7 @@ pub fn queue_tilemaps(
                             if tile.flags.contains(TileFlags::FLIP_Y) {
                                 uvs = [uvs[3], uvs[2], uvs[1], uvs[0]];
                             }
+                            let tile_uvs = uvs;
 
                             // By default, the size of the quad is the size of the texture
                             //let mut quad_size = image_size;
@@ -204,6 +207,7 @@ pub fn queue_tilemaps(
                                 chunk_meta.vertices.push(TilemapVertex {
                                     position: positions[*i],
                                     uv: uvs[*i].into(),
+                                    tile_uv: tile_uvs[*i].into(),
                                     color,
                                 });
                             }
@@ -259,6 +263,8 @@ pub fn queue_tilemaps(
                 chunk_meta.tilemap_gpu_data.clear();
                 chunk_meta.tilemap_gpu_data.push(TilemapGpuData {
                     transform: tilemap_transform.compute_matrix(),
+                    tile_size: chunk_meta.tile_size,
+                    texture_size: chunk_meta.texture_size,
                 });
 
                 chunk_meta.tilemap_gpu_data.write_buffer(&render_device, &render_queue);

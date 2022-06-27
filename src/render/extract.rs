@@ -189,6 +189,7 @@ pub fn extract_tilemaps(
                             .collect();
 
                         Some(ExtractedChunk {
+                            tile_size,
                             origin: chunk.origin,
                             tiles,
                             last_change_at: chunk.last_change_at,

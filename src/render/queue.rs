@@ -152,7 +152,7 @@ pub fn queue_tilemaps(
                             ((tilemap.entity, chunk.origin), ChunkMeta::default())
                         };
 
-                        chunk_meta.tile_size = chunk.tile_size;
+                        chunk_meta.tile_size = tilemap.tile_size;
                         chunk_meta.texture_size = image_size;
                         chunk_meta.vertices.clear();
 
@@ -170,6 +170,7 @@ pub fn queue_tilemaps(
                             if tile.flags.contains(TileFlags::FLIP_Y) {
                                 uvs = [uvs[3], uvs[2], uvs[1], uvs[0]];
                             }
+
                             let tile_uvs = uvs;
 
                             // By default, the size of the quad is the size of the texture

@@ -189,7 +189,6 @@ pub fn extract_tilemaps(
                             .collect();
 
                         Some(ExtractedChunk {
-                            tile_size,
                             origin: chunk.origin,
                             tiles,
                             last_change_at: chunk.last_change_at,
@@ -206,6 +205,7 @@ pub fn extract_tilemaps(
                     entity,
                     transform: *transform,
                     image_handle_id: texture_atlas.texture.id,
+                    tile_size,
                     atlas_size: texture_atlas.size,
                     chunks,
                     visible_chunks,

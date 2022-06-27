@@ -27,7 +27,6 @@ pub struct ExtractedTile {
 
 pub struct ExtractedChunk {
     pub origin: IVec3,
-    pub tile_size: Vec2,
     pub tiles: Vec<ExtractedTile>,
     pub last_change_at: Instant,
 }
@@ -36,6 +35,7 @@ pub struct ExtractedTilemap {
     pub entity: Entity,
     pub transform: GlobalTransform,
     pub image_handle_id: HandleId,
+    pub tile_size: Vec2,
     pub atlas_size: Vec2,
     pub chunks: Vec<ExtractedChunk>,
     pub visible_chunks: Vec<IVec3>,

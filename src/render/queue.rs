@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use bevy::asset::{AssetEvent, Handle};
-use bevy::core_pipeline::Transparent2d;
+use bevy::core_pipeline::core_2d::Transparent2d;
 use bevy::ecs::prelude::*;
 use bevy::math::{const_vec2, Vec2};
 use bevy::prelude::*;

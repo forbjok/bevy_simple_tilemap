@@ -1,7 +1,6 @@
 use bevy::asset::{AssetEvent, Assets, Handle};
 use bevy::ecs::prelude::*;
 use bevy::prelude::*;
-use bevy::render::camera::{ActiveCamera, Camera2d};
 use bevy::render::{texture::Image, view::ComputedVisibility, RenderWorld};
 use bevy::sprite::TextureAtlas;
 use bevy::transform::components::GlobalTransform;
@@ -47,7 +46,6 @@ pub fn extract_tilemaps(
         &Handle<TextureAtlas>,
     )>,
     windows: Res<Windows>,
-    active_camera: Res<ActiveCamera<Camera2d>>,
     camera_transform_query: Query<&GlobalTransform, With<Camera2d>>,
 ) {
     enum Anchor {
@@ -88,18 +86,16 @@ pub fn extract_tilemaps(
     let camera_rects = {
         let mut camera_rects: Vec<Rect> = Vec::with_capacity(3);
 
-        if let Some(camera_entity) = active_camera.get() {
-            if let Ok(camera_transform) = camera_transform_query.get(camera_entity) {
-                let camera_size = window_size * camera_transform.scale.truncate();
+        for camera_transform in camera_transform_query.iter() {
+            let camera_size = window_size * camera_transform.scale.truncate();
 
-                let camera_rect = Rect {
-                    anchor: Anchor::Center,
-                    position: camera_transform.translation.truncate(),
-                    size: camera_size,
-                };
+            let camera_rect = Rect {
+                anchor: Anchor::Center,
+                position: camera_transform.translation.truncate(),
+                size: camera_size,
+            };
 
-                camera_rects.push(camera_rect);
-            }
+            camera_rects.push(camera_rect);
         }
 
         camera_rects

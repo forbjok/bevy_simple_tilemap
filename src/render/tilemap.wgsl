@@ -31,6 +31,7 @@ fn vertex(
     [[location(3)]] vertex_color: u32,
 ) -> VertexOutput {
     var out: VertexOutput;
+
     out.uv = vertex_uv;
     out.tile_uv = vertex_tile_uv;
     out.position = view.view_proj * tilemap.transform * vec4<f32>(vertex_position, 1.0);
@@ -46,23 +47,25 @@ var sprite_sampler: sampler;
 
 [[stage(fragment)]]
 fn fragment(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-    var half_texture_pixel_size_u = 0.5 / tilemap.texture_size.x;
-    var half_texture_pixel_size_v = 0.5 / tilemap.texture_size.y;
+    let half_texture_pixel_size_u = 0.5 / tilemap.texture_size.x;
+    let half_texture_pixel_size_v = 0.5 / tilemap.texture_size.y;
     let half_tile_pixel_size_u = 0.5 / tilemap.tile_size.x;
     let half_tile_pixel_size_v = 0.5 / tilemap.tile_size.y;
 
     // Offset the UV 1/2 pixel from the sides of the tile, so that the sampler doesn't bleed onto
     // adjacent tiles at the edges.
-    var uv_offset: vec2<f32> = vec2<f32>(0.0, 0.0);
+    var uv_offset = vec2<f32>(0.0, 0.0);
+
     if (in.tile_uv.x < half_tile_pixel_size_u) {
         uv_offset.x = half_texture_pixel_size_u;
     } else if (in.tile_uv.x > (1.0 - half_tile_pixel_size_u)) {
-        uv_offset.x = - half_texture_pixel_size_u;
+        uv_offset.x = -half_texture_pixel_size_u;
     }
+
     if (in.tile_uv.y < half_tile_pixel_size_v) {
         uv_offset.y = half_texture_pixel_size_v;
     } else if (in.tile_uv.y > (1.0 - half_tile_pixel_size_v)) {
-        uv_offset.y = - half_texture_pixel_size_v;
+        uv_offset.y = -half_texture_pixel_size_v;
     }
 
     var color = textureSample(sprite_texture, sprite_sampler, in.uv + uv_offset) * in.color;

@@ -173,24 +173,14 @@ pub fn queue_tilemaps(
 
                             let tile_uvs = uvs;
 
-                            // By default, the size of the quad is the size of the texture
-                            //let mut quad_size = image_size;
-
                             // If a rect is specified, adjust UVs and the size of the quad
                             let rect = tile.rect;
-                            let rect_size = rect.size();
+                            let quad_size = rect.size();
                             for uv in &mut uvs {
-                                *uv = (rect.min + *uv * rect_size) / image_size;
+                                *uv = (rect.min + *uv * quad_size) / image_size;
                             }
 
-                            let quad_size = rect_size;
-
-                            // Override the size if a custom one is specified
-                            //if let Some(custom_size) = extracted_sprite.custom_size {
-                            //    quad_size = custom_size;
-                            //}
-
-                            let tile_pos = tile.pos.as_vec2() * quad_size; // TODO: Make work
+                            let tile_pos = tile.pos.as_vec2() * quad_size;
 
                             // Apply size and global transform
                             let positions = QUAD_VERTEX_POSITIONS

@@ -1,7 +1,8 @@
 use bevy::asset::{AssetEvent, Assets, Handle};
 use bevy::ecs::prelude::*;
 use bevy::prelude::*;
-use bevy::render::{texture::Image, view::ComputedVisibility, RenderWorld};
+use bevy::render::Extract;
+use bevy::render::{texture::Image, view::ComputedVisibility};
 use bevy::sprite::TextureAtlas;
 use bevy::transform::components::GlobalTransform;
 
@@ -13,8 +14,10 @@ use crate::TileMap;
 
 use super::*;
 
-pub fn extract_tilemap_events(mut render_world: ResMut<RenderWorld>, mut image_events: EventReader<AssetEvent<Image>>) {
-    let mut events = render_world.get_resource_mut::<TilemapAssetEvents>().unwrap();
+pub fn extract_tilemap_events(
+    mut events: ResMut<TilemapAssetEvents>,
+    mut image_events: Extract<EventReader<AssetEvent<Image>>>,
+) {
     let TilemapAssetEvents { ref mut images } = *events;
     images.clear();
 
@@ -35,18 +38,20 @@ pub fn extract_tilemap_events(mut render_world: ResMut<RenderWorld>, mut image_e
 }
 
 pub fn extract_tilemaps(
-    mut render_world: ResMut<RenderWorld>,
-    images: Res<Assets<Image>>,
-    texture_atlases: Res<Assets<TextureAtlas>>,
-    tilemap_query: Query<(
-        Entity,
-        &ComputedVisibility,
-        &TileMap,
-        &GlobalTransform,
-        &Handle<TextureAtlas>,
-    )>,
-    windows: Res<Windows>,
-    camera_transform_query: Query<&GlobalTransform, With<Camera2d>>,
+    mut extracted_tilemaps: ResMut<ExtractedTilemaps>,
+    images: Extract<Res<Assets<Image>>>,
+    texture_atlases: Extract<Res<Assets<TextureAtlas>>>,
+    tilemap_query: Extract<
+        Query<(
+            Entity,
+            &ComputedVisibility,
+            &TileMap,
+            &GlobalTransform,
+            &Handle<TextureAtlas>,
+        )>,
+    >,
+    windows: Extract<Res<Windows>>,
+    camera_transform_query: Extract<Query<&GlobalTransform, With<Camera2d>>>,
 ) {
     enum Anchor {
         BottomLeft,
@@ -101,8 +106,8 @@ pub fn extract_tilemaps(
         camera_rects
     };
 
-    let mut extracted_tilemaps = render_world.get_resource_mut::<ExtractedTilemaps>().unwrap();
     extracted_tilemaps.tilemaps.clear();
+
     for (entity, computed_visibility, tilemap, transform, texture_atlas_handle) in tilemap_query.iter() {
         if !computed_visibility.is_visible {
             continue;

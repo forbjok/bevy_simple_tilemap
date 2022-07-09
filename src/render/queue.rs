@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use bevy::asset::{AssetEvent, Handle};
 use bevy::core_pipeline::core_2d::Transparent2d;
 use bevy::ecs::prelude::*;
-use bevy::math::{const_vec2, Vec2};
+use bevy::math::Vec2;
 use bevy::prelude::*;
 use bevy::render::{
     render_asset::RenderAssets,
@@ -28,17 +28,17 @@ use super::*;
 const QUAD_INDICES: [usize; 6] = [0, 2, 3, 0, 1, 2];
 
 const QUAD_VERTEX_POSITIONS: [Vec2; 4] = [
-    const_vec2!([-0.5, -0.5]),
-    const_vec2!([0.5, -0.5]),
-    const_vec2!([0.5, 0.5]),
-    const_vec2!([-0.5, 0.5]),
+    Vec2::from_array([-0.5, -0.5]),
+    Vec2::from_array([0.5, -0.5]),
+    Vec2::from_array([0.5, 0.5]),
+    Vec2::from_array([-0.5, 0.5]),
 ];
 
 const QUAD_UVS: [Vec2; 4] = [
-    const_vec2!([0., 1.]),
-    const_vec2!([1., 1.]),
-    const_vec2!([1., 0.]),
-    const_vec2!([0., 0.]),
+    Vec2::from_array([0., 1.]),
+    Vec2::from_array([1., 1.]),
+    Vec2::from_array([1., 0.]),
+    Vec2::from_array([0., 0.]),
 ];
 
 #[allow(clippy::too_many_arguments)]

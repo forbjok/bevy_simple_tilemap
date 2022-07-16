@@ -1,34 +1,34 @@
 struct View {
-    view_proj: mat4x4<f32>;
-    world_position: vec3<f32>;
+    view_proj: mat4x4<f32>,
+    world_position: vec3<f32>,
 };
 
-[[group(0), binding(0)]]
+@group(0) @binding(0)
 var<uniform> view: View;
 
 struct VertexOutput {
-    [[location(0)]] uv: vec2<f32>;
-    [[location(1)]] color: vec4<f32>;
-    [[location(2)]] tile_uv: vec2<f32>;
-    [[builtin(position)]] position: vec4<f32>;
+    @location(0) uv: vec2<f32>,
+    @location(1) color: vec4<f32>,
+    @location(2) tile_uv: vec2<f32>,
+    @builtin(position) position: vec4<f32>,
 };
 
 struct TilemapGpuData {
-    transform: mat4x4<f32>;
-    tile_size: vec2<f32>;
-    texture_size: vec2<f32>;
+    transform: mat4x4<f32>,
+    tile_size: vec2<f32>,
+    texture_size: vec2<f32>,
 };
 
-[[group(2), binding(0)]]
+@group(2) @binding(0)
 var<uniform> tilemap: TilemapGpuData;
 
-[[stage(vertex)]]
+@vertex
 fn vertex(
-    [[builtin(vertex_index)]] vertex_index: u32,
-    [[location(0)]] vertex_position: vec3<f32>,
-    [[location(1)]] vertex_uv: vec2<f32>,
-    [[location(2)]] vertex_tile_uv: vec2<f32>,
-    [[location(3)]] vertex_color: u32,
+    @builtin(vertex_index) vertex_index: u32,
+    @location(0) vertex_position: vec3<f32>,
+    @location(1) vertex_uv: vec2<f32>,
+    @location(2) vertex_tile_uv: vec2<f32>,
+    @location(3) vertex_color: u32,
 ) -> VertexOutput {
     var out: VertexOutput;
 
@@ -40,13 +40,13 @@ fn vertex(
     return out;
 }
 
-[[group(1), binding(0)]]
+@group(1) @binding(0)
 var sprite_texture: texture_2d<f32>;
-[[group(1), binding(1)]]
+@group(1) @binding(1)
 var sprite_sampler: sampler;
 
-[[stage(fragment)]]
-fn fragment(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+@fragment
+fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let half_texture_pixel_size_u = 0.5 / tilemap.texture_size.x;
     let half_texture_pixel_size_v = 0.5 / tilemap.texture_size.y;
     let half_tile_pixel_size_u = 0.5 / tilemap.tile_size.x;

@@ -235,7 +235,10 @@ pub fn queue_tilemaps(
                 .collect();
 
             sorted_chunks.sort_unstable_by(|((_, a), att, _), ((_, b), btt, _)| {
-                match att.translation.z.partial_cmp(&btt.translation.z) {
+                let att_translation = att.translation();
+                let btt_translation = btt.translation();
+
+                match att_translation.z.partial_cmp(&btt_translation.z) {
                     Some(Ordering::Equal) | None => a.z.cmp(&b.z),
                     Some(other) => other,
                 }
@@ -271,8 +274,10 @@ pub fn queue_tilemaps(
                     layout: &tilemap_pipeline.tilemap_gpu_data_layout,
                 }));
 
+                let translation = tilemap_transform.translation();
+
                 // These items will be sorted by depth with other phase items
-                let sort_key = FloatOrd(tilemap_transform.translation.z);
+                let sort_key = FloatOrd(translation.z);
 
                 let vertex_count = chunk_meta.vertices.len() as u32;
 

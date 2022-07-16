@@ -92,11 +92,12 @@ pub fn extract_tilemaps(
         let mut camera_rects: Vec<Rect> = Vec::with_capacity(3);
 
         for camera_transform in camera_transform_query.iter() {
-            let camera_size = window_size * camera_transform.scale.truncate();
+            let (camera_scale, _, camera_translation) = camera_transform.to_scale_rotation_translation();
+            let camera_size = window_size * camera_scale.truncate();
 
             let camera_rect = Rect {
                 anchor: Anchor::Center,
-                position: camera_transform.translation.truncate(),
+                position: camera_translation.truncate(),
                 size: camera_size,
             };
 
@@ -109,19 +110,21 @@ pub fn extract_tilemaps(
     extracted_tilemaps.tilemaps.clear();
 
     for (entity, computed_visibility, tilemap, transform, texture_atlas_handle) in tilemap_query.iter() {
-        if !computed_visibility.is_visible {
+        if !computed_visibility.is_visible() {
             continue;
         }
 
         if let Some(texture_atlas) = texture_atlases.get(texture_atlas_handle) {
             if images.contains(&texture_atlas.texture) {
+                let (scale, _, _) = transform.to_scale_rotation_translation();
+
                 // Determine tile size in pixels from first sprite in TextureAtlas.
                 // It is assumed and mandated that all sprites in the sprite sheet are the same size.
                 let tile0_tex = texture_atlas.textures.get(0).unwrap();
                 let tile_size = Vec2::new(tile0_tex.width(), tile0_tex.height());
 
                 let chunk_pixel_size = Vec2::new(CHUNK_WIDTH as f32, CHUNK_HEIGHT as f32) * tile_size;
-                let chunk_pixel_size = chunk_pixel_size * transform.scale.truncate();
+                let chunk_pixel_size = chunk_pixel_size * scale.truncate();
 
                 let chunks_changed_at = &mut extracted_tilemaps.chunks_changed_at;
 

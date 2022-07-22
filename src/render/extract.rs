@@ -85,7 +85,13 @@ pub fn extract_tilemaps(
         }
     }
 
-    let window = windows.get_primary().unwrap();
+    let window = windows.get_primary();
+    if window.is_none() {
+        return;
+    }
+
+    let window = window.unwrap();
+
     let window_size = Vec2::new(window.width(), window.height());
 
     let camera_rects = {

@@ -1,16 +1,16 @@
 use bevy::{
-    core::FixedTimestep,
     math::{ivec2, vec2},
     prelude::*,
-    render::camera::{ActiveCamera, Camera2d},
+    render::texture::ImageSettings,
+    time::FixedTimestep,
 };
 
 use bevy_simple_tilemap::prelude::*;
 
 fn main() {
     App::new()
-        // Disable MSAA, as it produces weird rendering artifacts
-        .insert_resource(Msaa { samples: 1 })
+        // Fix blurry/smudged sprites
+        .insert_resource(ImageSettings::default_nearest())
         .add_plugins(DefaultPlugins)
         .add_plugin(SimpleTileMapPlugin)
         .add_system(update_tiles1_system.with_run_criteria(FixedTimestep::step(0.1)))
@@ -21,8 +21,7 @@ fn main() {
 }
 
 fn input_system(
-    active_camera: Res<ActiveCamera<Camera2d>>,
-    mut camera_transform_query: Query<(&mut Transform,), With<Camera2d>>,
+    mut camera_transform_query: Query<&mut Transform, With<Camera2d>>,
     mut tilemap_visible_query: Query<&mut Visibility, With<TileMap>>,
     keyboard_input: Res<Input<KeyCode>>,
     time: Res<Time>,
@@ -30,31 +29,29 @@ fn input_system(
     const MOVE_SPEED: f32 = 1000.0;
     const ZOOM_SPEED: f32 = 10.0;
 
-    if let Some(active_camera_entity) = active_camera.get() {
-        if let Ok((mut tf,)) = camera_transform_query.get_mut(active_camera_entity) {
-            if keyboard_input.pressed(KeyCode::X) {
-                tf.scale -= Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
-            } else if keyboard_input.pressed(KeyCode::Z) {
-                tf.scale += Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
-            }
+    if let Some(mut tf) = camera_transform_query.iter_mut().next() {
+        if keyboard_input.pressed(KeyCode::X) {
+            tf.scale -= Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
+        } else if keyboard_input.pressed(KeyCode::Z) {
+            tf.scale += Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
+        }
 
-            if keyboard_input.pressed(KeyCode::A) {
-                tf.translation.x -= MOVE_SPEED * time.delta_seconds();
-            } else if keyboard_input.pressed(KeyCode::D) {
-                tf.translation.x += MOVE_SPEED * time.delta_seconds();
-            }
+        if keyboard_input.pressed(KeyCode::A) {
+            tf.translation.x -= MOVE_SPEED * time.delta_seconds();
+        } else if keyboard_input.pressed(KeyCode::D) {
+            tf.translation.x += MOVE_SPEED * time.delta_seconds();
+        }
 
-            if keyboard_input.pressed(KeyCode::S) {
-                tf.translation.y -= MOVE_SPEED * time.delta_seconds();
-            } else if keyboard_input.pressed(KeyCode::W) {
-                tf.translation.y += MOVE_SPEED * time.delta_seconds();
-            }
+        if keyboard_input.pressed(KeyCode::S) {
+            tf.translation.y -= MOVE_SPEED * time.delta_seconds();
+        } else if keyboard_input.pressed(KeyCode::W) {
+            tf.translation.y += MOVE_SPEED * time.delta_seconds();
+        }
 
-            if keyboard_input.just_pressed(KeyCode::V) {
-                // Toggle visibility
-                let mut visible = tilemap_visible_query.iter_mut().next().unwrap();
-                visible.is_visible = !visible.is_visible;
-            }
+        if keyboard_input.just_pressed(KeyCode::V) {
+            // Toggle visibility
+            let mut visible = tilemap_visible_query.iter_mut().next().unwrap();
+            visible.is_visible = !visible.is_visible;
         }
     }
 }
@@ -166,7 +163,8 @@ struct TileMap2 {
 fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atlases: ResMut<Assets<TextureAtlas>>) {
     // Load tilesheet texture and make a texture atlas from it
     let texture_handle = asset_server.load("textures/tilesheet.png");
-    let texture_atlas = TextureAtlas::from_grid_with_padding(texture_handle, vec2(16.0, 16.0), 4, 1, vec2(1.0, 1.0));
+    let texture_atlas =
+        TextureAtlas::from_grid_with_padding(texture_handle, vec2(16.0, 16.0), 4, 1, vec2(1.0, 1.0), Vec2::ZERO);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     let mut tiles = Vec::new();
@@ -218,7 +216,7 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atl
     };
 
     // Spawn camera
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     // Spawn tilemaps
     commands.spawn_bundle(tilemap_bundle1).insert(TileMap1 {

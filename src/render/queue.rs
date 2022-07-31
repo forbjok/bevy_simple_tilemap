@@ -1,10 +1,9 @@
 use std::cmp::Ordering;
 
 use bevy::asset::{AssetEvent, Handle};
-use bevy::core::FloatOrd;
-use bevy::core_pipeline::Transparent2d;
+use bevy::core_pipeline::core_2d::Transparent2d;
 use bevy::ecs::prelude::*;
-use bevy::math::{const_vec2, Vec2};
+use bevy::math::Vec2;
 use bevy::prelude::*;
 use bevy::render::{
     render_asset::RenderAssets,
@@ -14,6 +13,8 @@ use bevy::render::{
     texture::Image,
     view::ViewUniforms,
 };
+
+use bevy::utils::FloatOrd;
 
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -27,17 +28,17 @@ use super::*;
 const QUAD_INDICES: [usize; 6] = [0, 2, 3, 0, 1, 2];
 
 const QUAD_VERTEX_POSITIONS: [Vec2; 4] = [
-    const_vec2!([-0.5, -0.5]),
-    const_vec2!([0.5, -0.5]),
-    const_vec2!([0.5, 0.5]),
-    const_vec2!([-0.5, 0.5]),
+    Vec2::from_array([-0.5, -0.5]),
+    Vec2::from_array([0.5, -0.5]),
+    Vec2::from_array([0.5, 0.5]),
+    Vec2::from_array([-0.5, 0.5]),
 ];
 
 const QUAD_UVS: [Vec2; 4] = [
-    const_vec2!([0., 1.]),
-    const_vec2!([1., 1.]),
-    const_vec2!([1., 0.]),
-    const_vec2!([0., 0.]),
+    Vec2::from_array([0., 1.]),
+    Vec2::from_array([1., 1.]),
+    Vec2::from_array([1., 0.]),
+    Vec2::from_array([0., 0.]),
 ];
 
 #[allow(clippy::too_many_arguments)]
@@ -98,7 +99,7 @@ pub fn queue_tilemaps(
 
                 // Set-up a new possible batch
                 if let Some(gpu_image) = gpu_images.get(&Handle::weak(tilemap.image_handle_id)) {
-                    image_size = Vec2::new(gpu_image.size.width, gpu_image.size.height);
+                    image_size = gpu_image.size;
 
                     image_bind_groups
                         .values
@@ -234,7 +235,10 @@ pub fn queue_tilemaps(
                 .collect();
 
             sorted_chunks.sort_unstable_by(|((_, a), att, _), ((_, b), btt, _)| {
-                match att.translation.z.partial_cmp(&btt.translation.z) {
+                let att_translation = att.translation();
+                let btt_translation = btt.translation();
+
+                match att_translation.z.partial_cmp(&btt_translation.z) {
                     Some(Ordering::Equal) | None => a.z.cmp(&b.z),
                     Some(other) => other,
                 }
@@ -270,8 +274,10 @@ pub fn queue_tilemaps(
                     layout: &tilemap_pipeline.tilemap_gpu_data_layout,
                 }));
 
+                let translation = tilemap_transform.translation();
+
                 // These items will be sorted by depth with other phase items
-                let sort_key = FloatOrd(tilemap_transform.translation.z);
+                let sort_key = FloatOrd(translation.z);
 
                 let vertex_count = chunk_meta.vertices.len() as u32;
 

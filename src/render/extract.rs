@@ -1,8 +1,8 @@
 use bevy::asset::{AssetEvent, Assets, Handle};
 use bevy::ecs::prelude::*;
 use bevy::prelude::*;
-use bevy::render::camera::{ActiveCamera, Camera2d};
-use bevy::render::{texture::Image, view::ComputedVisibility, RenderWorld};
+use bevy::render::Extract;
+use bevy::render::{texture::Image, view::ComputedVisibility};
 use bevy::sprite::TextureAtlas;
 use bevy::transform::components::GlobalTransform;
 
@@ -14,8 +14,10 @@ use crate::TileMap;
 
 use super::*;
 
-pub fn extract_tilemap_events(mut render_world: ResMut<RenderWorld>, mut image_events: EventReader<AssetEvent<Image>>) {
-    let mut events = render_world.get_resource_mut::<TilemapAssetEvents>().unwrap();
+pub fn extract_tilemap_events(
+    mut events: ResMut<TilemapAssetEvents>,
+    mut image_events: Extract<EventReader<AssetEvent<Image>>>,
+) {
     let TilemapAssetEvents { ref mut images } = *events;
     images.clear();
 
@@ -35,20 +37,22 @@ pub fn extract_tilemap_events(mut render_world: ResMut<RenderWorld>, mut image_e
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn extract_tilemaps(
-    mut render_world: ResMut<RenderWorld>,
-    images: Res<Assets<Image>>,
-    texture_atlases: Res<Assets<TextureAtlas>>,
-    tilemap_query: Query<(
-        Entity,
-        &ComputedVisibility,
-        &TileMap,
-        &GlobalTransform,
-        &Handle<TextureAtlas>,
-    )>,
-    windows: Res<Windows>,
-    active_camera: Res<ActiveCamera<Camera2d>>,
-    camera_transform_query: Query<&GlobalTransform, With<Camera2d>>,
+    mut extracted_tilemaps: ResMut<ExtractedTilemaps>,
+    images: Extract<Res<Assets<Image>>>,
+    texture_atlases: Extract<Res<Assets<TextureAtlas>>>,
+    tilemap_query: Extract<
+        Query<(
+            Entity,
+            &ComputedVisibility,
+            &TileMap,
+            &GlobalTransform,
+            &Handle<TextureAtlas>,
+        )>,
+    >,
+    windows: Extract<Res<Windows>>,
+    camera_transform_query: Extract<Query<&GlobalTransform, With<Camera2d>>>,
 ) {
     enum Anchor {
         BottomLeft,
@@ -82,45 +86,52 @@ pub fn extract_tilemaps(
         }
     }
 
-    let window = windows.get_primary().unwrap();
+    let window = windows.get_primary();
+    if window.is_none() {
+        return;
+    }
+
+    let window = window.unwrap();
+
     let window_size = Vec2::new(window.width(), window.height());
 
     let camera_rects = {
         let mut camera_rects: Vec<Rect> = Vec::with_capacity(3);
 
-        if let Some(camera_entity) = active_camera.get() {
-            if let Ok(camera_transform) = camera_transform_query.get(camera_entity) {
-                let camera_size = window_size * camera_transform.scale.truncate();
+        for camera_transform in camera_transform_query.iter() {
+            let (camera_scale, _, camera_translation) = camera_transform.to_scale_rotation_translation();
+            let camera_size = window_size * camera_scale.truncate();
 
-                let camera_rect = Rect {
-                    anchor: Anchor::Center,
-                    position: camera_transform.translation.truncate(),
-                    size: camera_size,
-                };
+            let camera_rect = Rect {
+                anchor: Anchor::Center,
+                position: camera_translation.truncate(),
+                size: camera_size,
+            };
 
-                camera_rects.push(camera_rect);
-            }
+            camera_rects.push(camera_rect);
         }
 
         camera_rects
     };
 
-    let mut extracted_tilemaps = render_world.get_resource_mut::<ExtractedTilemaps>().unwrap();
     extracted_tilemaps.tilemaps.clear();
+
     for (entity, computed_visibility, tilemap, transform, texture_atlas_handle) in tilemap_query.iter() {
-        if !computed_visibility.is_visible {
+        if !computed_visibility.is_visible() {
             continue;
         }
 
         if let Some(texture_atlas) = texture_atlases.get(texture_atlas_handle) {
             if images.contains(&texture_atlas.texture) {
+                let (scale, _, _) = transform.to_scale_rotation_translation();
+
                 // Determine tile size in pixels from first sprite in TextureAtlas.
                 // It is assumed and mandated that all sprites in the sprite sheet are the same size.
                 let tile0_tex = texture_atlas.textures.get(0).unwrap();
                 let tile_size = Vec2::new(tile0_tex.width(), tile0_tex.height());
 
                 let chunk_pixel_size = Vec2::new(CHUNK_WIDTH as f32, CHUNK_HEIGHT as f32) * tile_size;
-                let chunk_pixel_size = chunk_pixel_size * transform.scale.truncate();
+                let chunk_pixel_size = chunk_pixel_size * scale.truncate();
 
                 let chunks_changed_at = &mut extracted_tilemaps.chunks_changed_at;
 

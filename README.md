@@ -30,7 +30,7 @@ fn setup(
 ) {
     // Load tilesheet texture and make a texture atlas from it
     let texture_handle = asset_server.load("textures/tilesheet.png");
-    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 16.0), 4, 1);
+    let texture_atlas = TextureAtlas::from_grid_with_padding(texture_handle, vec2(16.0, 16.0), 4, 1, vec2(1.0, 1.0), Vec2::ZERO);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     // Set up tilemap
@@ -46,15 +46,15 @@ fn setup(
 
 ### Updating (or inserting) single tile:
 ```rust
-tilemap.set_tile(IVec3::new(0, 0, 0), Some(Tile { sprite_index: 0, color: Color::WHITE }));
+tilemap.set_tile(ivec3(0, 0, 0), Some(Tile { sprite_index: 0, color: Color::WHITE }));
 ```
 
 ### Updating (or inserting) multiple tiles:
 ```rust
 // List to store set tile operations
 let mut tiles: Vec<(IVec3, Option<Tile>)> = Vec::new();
-tiles.push((IVec3::new(0, 0, 0), Some(Tile { sprite_index: 0, color: Color::WHITE })));
-tiles.push((IVec3::new(1, 0, 0), Some(Tile { sprite_index: 1, color: Color::WHITE })));
+tiles.push((ivec3(0, 0, 0), Some(Tile { sprite_index: 0, color: Color::WHITE })));
+tiles.push((ivec3(1, 0, 0), Some(Tile { sprite_index: 1, color: Color::WHITE })));
 
 // Perform tile update
 tilemap.set_tiles(tiles);

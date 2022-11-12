@@ -1,10 +1,11 @@
 use bevy::{
     asset::HandleId,
     math::{IVec2, IVec3, Mat4, Vec2},
-    prelude::{AssetEvent, Color, Component, Entity, GlobalTransform, Handle, HandleUntyped, Image, Shader},
+    prelude::{
+        AssetEvent, Color, Component, Entity, GlobalTransform, Handle, HandleUntyped, Image, Rect, Resource, Shader,
+    },
     reflect::TypeUuid,
     render::render_resource::{BindGroup, BufferUsages, BufferVec, DynamicUniformBuffer, ShaderType},
-    sprite::Rect,
     utils::{HashMap, Instant},
 };
 use bytemuck::{Pod, Zeroable};
@@ -41,13 +42,13 @@ pub struct ExtractedTilemap {
     pub visible_chunks: Vec<IVec3>,
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct ExtractedTilemaps {
     pub tilemaps: Vec<ExtractedTilemap>,
     pub chunks_changed_at: HashMap<ChunkKey, Instant>,
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct TilemapAssetEvents {
     pub images: Vec<AssetEvent<Image>>,
 }
@@ -91,19 +92,19 @@ impl Default for ChunkMeta {
 
 pub type ChunkKey = (Entity, IVec3);
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct TilemapMeta {
     chunks: HashMap<ChunkKey, ChunkMeta>,
     view_bind_group: Option<BindGroup>,
 }
 
-#[derive(Component, PartialEq, Copy, Clone)]
+#[derive(Component, PartialEq, Copy, Clone, Eq)]
 pub struct TilemapBatch {
     image_handle_id: HandleId,
     chunk_key: (Entity, IVec3),
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct ImageBindGroups {
     values: HashMap<Handle<Image>, BindGroup>,
 }

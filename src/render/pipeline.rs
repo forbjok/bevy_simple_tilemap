@@ -4,6 +4,7 @@ use bevy::render::{render_resource::*, renderer::RenderDevice, texture::BevyDefa
 
 use super::*;
 
+#[derive(Resource)]
 pub struct TilemapPipeline {
     pub(super) view_layout: BindGroupLayout,
     pub(super) material_layout: BindGroupLayout,

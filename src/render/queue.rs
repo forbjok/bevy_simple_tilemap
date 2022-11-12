@@ -253,7 +253,7 @@ pub fn queue_tilemaps(
                     image_handle_id: *tilemap_image_handle_ids.get(tilemap_entity).unwrap(),
                 };
 
-                let batch_entity = commands.spawn_bundle((batch,)).id();
+                let batch_entity = commands.spawn((batch,)).id();
 
                 chunk_meta.tilemap_gpu_data.clear();
                 chunk_meta.tilemap_gpu_data.push(TilemapGpuData {

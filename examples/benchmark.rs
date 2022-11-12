@@ -1,14 +1,12 @@
 use std::ops::Range;
 
-use bevy::{math::vec2, prelude::*, render::texture::ImageSettings};
+use bevy::{math::vec2, prelude::*};
 
 use bevy_simple_tilemap::prelude::*;
 
 fn main() {
     App::new()
-        // Fix blurry/smudged sprites
-        .insert_resource(ImageSettings::default_nearest())
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugin(SimpleTileMapPlugin)
         .add_system(update_tiles_system)
         .add_system(input_system)
@@ -92,8 +90,7 @@ fn update_tiles_system(mut query: Query<&mut TileMap>, mut count: Local<u32>) {
 fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atlases: ResMut<Assets<TextureAtlas>>) {
     // Load tilesheet texture and make a texture atlas from it
     let texture_handle = asset_server.load("textures/tilesheet.png");
-    let texture_atlas =
-        TextureAtlas::from_grid_with_padding(texture_handle, vec2(16.0, 16.0), 4, 1, vec2(1.0, 1.0), Vec2::ZERO);
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, vec2(16.0, 16.0), 4, 1, Some(vec2(1.0, 1.0)), None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     // Set up tilemap
@@ -108,8 +105,8 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atl
     };
 
     // Spawn camera
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
 
     // Spawn tilemap
-    commands.spawn_bundle(tilemap_bundle);
+    commands.spawn(tilemap_bundle);
 }

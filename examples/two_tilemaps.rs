@@ -1,7 +1,6 @@
 use bevy::{
     math::{ivec2, vec2},
     prelude::*,
-    render::texture::ImageSettings,
     time::FixedTimestep,
 };
 
@@ -9,9 +8,7 @@ use bevy_simple_tilemap::prelude::*;
 
 fn main() {
     App::new()
-        // Fix blurry/smudged sprites
-        .insert_resource(ImageSettings::default_nearest())
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugin(SimpleTileMapPlugin)
         .add_system(update_tiles1_system.with_run_criteria(FixedTimestep::step(0.1)))
         .add_system(update_tiles2_system.with_run_criteria(FixedTimestep::step(0.05)))
@@ -163,8 +160,7 @@ struct TileMap2 {
 fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atlases: ResMut<Assets<TextureAtlas>>) {
     // Load tilesheet texture and make a texture atlas from it
     let texture_handle = asset_server.load("textures/tilesheet.png");
-    let texture_atlas =
-        TextureAtlas::from_grid_with_padding(texture_handle, vec2(16.0, 16.0), 4, 1, vec2(1.0, 1.0), Vec2::ZERO);
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, vec2(16.0, 16.0), 4, 1, Some(vec2(1.0, 1.0)), None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     let mut tiles = Vec::new();
@@ -216,14 +212,14 @@ fn setup(asset_server: Res<AssetServer>, mut commands: Commands, mut texture_atl
     };
 
     // Spawn camera
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
 
     // Spawn tilemaps
-    commands.spawn_bundle(tilemap_bundle1).insert(TileMap1 {
+    commands.spawn(tilemap_bundle1).insert(TileMap1 {
         pos: ivec2(0, 0),
         sprite_index: 0,
     });
-    commands.spawn_bundle(tilemap_bundle2).insert(TileMap2 {
+    commands.spawn(tilemap_bundle2).insert(TileMap2 {
         pos: ivec2(0, 0),
         direction: 0,
         level: 0,

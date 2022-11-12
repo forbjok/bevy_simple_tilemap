@@ -1,3 +1,5 @@
+use std::ops::Mul;
+
 use bevy::asset::{AssetEvent, Assets, Handle};
 use bevy::ecs::prelude::*;
 use bevy::prelude::*;
@@ -142,7 +144,7 @@ pub fn extract_tilemaps(
                     .filter_map(|(_, chunk)| {
                         let chunk_translation =
                             (chunk.origin.truncate().as_vec2() * tile_size).extend(chunk.origin.z as f32);
-                        let chunk_translation = transform.mul_vec3(chunk_translation);
+                        let chunk_translation = transform.mul(chunk_translation);
 
                         let chunk_rect = Rect {
                             anchor: Anchor::BottomLeft,
@@ -215,7 +217,7 @@ pub fn extract_tilemaps(
                 extracted_tilemaps.tilemaps.push(ExtractedTilemap {
                     entity,
                     transform: *transform,
-                    image_handle_id: texture_atlas.texture.id,
+                    image_handle_id: texture_atlas.texture.id(),
                     tile_size,
                     atlas_size: texture_atlas.size,
                     chunks,

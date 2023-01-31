@@ -4,7 +4,17 @@ use bevy_simple_tilemap::prelude::*;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    window: WindowDescriptor {
+                        scale_factor_override: Some(1.0),
+                        ..Default::default()
+                    },
+                    ..default()
+                })
+                .set(ImagePlugin::default_nearest()),
+        )
         .add_plugin(SimpleTileMapPlugin)
         .add_system(update_tiles_system.with_run_criteria(FixedTimestep::step(0.5)))
         .add_system(input_system)

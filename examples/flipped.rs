@@ -7,7 +7,17 @@ use bevy_simple_tilemap::{prelude::*, TileFlags};
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    window: WindowDescriptor {
+                        scale_factor_override: Some(1.0),
+                        ..Default::default()
+                    },
+                    ..default()
+                })
+                .set(ImagePlugin::default_nearest()),
+        )
         .add_plugin(SimpleTileMapPlugin)
         .add_system(input_system)
         .add_startup_system(setup)

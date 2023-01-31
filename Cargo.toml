@@ -26,7 +26,11 @@ features = [
 [dev-dependencies.bevy]
 version = "0.9.0"
 default-features = false
-features = ["x11", "png"]
+features = [
+  "bevy_pbr",
+  "png",
+  "x11",
+]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rayon = "1.5.3"

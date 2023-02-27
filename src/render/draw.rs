@@ -95,7 +95,9 @@ impl EntityRenderCommand for SetVertexBuffer {
         let tilemap_batch = query_batch.get(item).unwrap();
         let chunk_meta = tilemap_meta.into_inner().chunks.get(&tilemap_batch.chunk_key).unwrap();
 
-        pass.set_vertex_buffer(0, chunk_meta.vertices.buffer().unwrap().slice(..));
+        if let Some(buffer) = chunk_meta.vertices.buffer() {
+            pass.set_vertex_buffer(0, buffer.slice(..));
+        }
 
         RenderCommandResult::Success
     }

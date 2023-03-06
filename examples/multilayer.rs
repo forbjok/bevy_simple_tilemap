@@ -1,4 +1,4 @@
-use bevy::{math::vec2, prelude::*, time::FixedTimestep};
+use bevy::{math::vec2, prelude::*, window::WindowResolution};
 
 use bevy_simple_tilemap::prelude::*;
 
@@ -7,18 +7,19 @@ fn main() {
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
-                    window: WindowDescriptor {
-                        scale_factor_override: Some(1.0),
+                    primary_window: Some(Window {
+                        resolution: WindowResolution::new(1280.0, 720.0).with_scale_factor_override(1.0),
                         ..Default::default()
-                    },
+                    }),
                     ..default()
                 })
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugin(SimpleTileMapPlugin)
-        .add_system(update_tiles_system.with_run_criteria(FixedTimestep::step(0.5)))
+        .add_system(update_tiles_system.in_schedule(CoreSchedule::FixedUpdate))
         .add_system(input_system)
         .add_startup_system(setup)
+        .insert_resource(FixedTime::new_from_secs(0.5))
         .run();
 }
 
@@ -52,8 +53,13 @@ fn input_system(
 
         if keyboard_input.just_pressed(KeyCode::V) {
             // Toggle visibility
-            let mut visible = tilemap_visible_query.iter_mut().next().unwrap();
-            visible.is_visible = !visible.is_visible;
+            let mut visibility = tilemap_visible_query.iter_mut().next().unwrap();
+
+            if *visibility == Visibility::Hidden {
+                *visibility = Visibility::Visible;
+            } else {
+                *visibility = Visibility::Hidden;
+            }
         }
     }
 }

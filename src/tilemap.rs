@@ -140,7 +140,7 @@ fn row_major_index(pos: IVec2) -> usize {
 pub fn row_major_pos(index: usize) -> IVec2 {
     let y = index / CHUNK_WIDTH_USIZE;
 
-    IVec2::new((index - (y * CHUNK_WIDTH_USIZE as usize)) as i32, y as i32)
+    IVec2::new((index - (y * CHUNK_WIDTH_USIZE)) as i32, y as i32)
 }
 
 /// Update and mark chunks for remeshing, based on queued tile changes

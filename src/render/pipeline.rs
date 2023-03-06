@@ -134,11 +134,11 @@ impl SpecializedRenderPipeline for TilemapPipeline {
                     write_mask: ColorWrites::ALL,
                 })],
             }),
-            layout: Some(vec![
+            layout: vec![
                 self.view_layout.clone(),
                 self.material_layout.clone(),
                 self.tilemap_gpu_data_layout.clone(),
-            ]),
+            ],
             primitive: PrimitiveState {
                 front_face: FrontFace::Ccw,
                 cull_mode: None,
@@ -155,6 +155,7 @@ impl SpecializedRenderPipeline for TilemapPipeline {
                 alpha_to_coverage_enabled: false,
             },
             label: Some("tilemap_pipeline".into()),
+            push_constant_ranges: Vec::new(),
         }
     }
 }

@@ -2,9 +2,8 @@ use super::*;
 use bevy::asset::Handle;
 use bevy::ecs::system::lifetimeless::*;
 use bevy::ecs::system::SystemParamItem;
-use bevy::render::render_phase::{
-    BatchedPhaseItem, EntityRenderCommand, RenderCommand, RenderCommandResult, SetItemPipeline,
-};
+use bevy::render::render_phase::PhaseItem;
+use bevy::render::render_phase::{BatchedPhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline};
 use bevy::render::{render_phase::TrackedRenderPass, view::ViewUniformOffset};
 
 pub type DrawTilemap = (
@@ -17,16 +16,18 @@ pub type DrawTilemap = (
 );
 
 pub struct SetTilemapViewBindGroup<const I: usize>;
-impl<const I: usize> EntityRenderCommand for SetTilemapViewBindGroup<I> {
-    type Param = (SRes<TilemapMeta>, SQuery<Read<ViewUniformOffset>>);
+impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetTilemapViewBindGroup<I> {
+    type Param = SRes<TilemapMeta>;
+    type ViewWorldQuery = Read<ViewUniformOffset>;
+    type ItemWorldQuery = ();
 
     fn render<'w>(
-        view: Entity,
-        _item: Entity,
-        (tilemap_meta, view_query): SystemParamItem<'w, '_, Self::Param>,
+        _item: &P,
+        view_uniform: &'_ ViewUniformOffset,
+        _entity: (),
+        tilemap_meta: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let view_uniform = view_query.get(view).unwrap();
         pass.set_bind_group(
             I,
             tilemap_meta.into_inner().view_bind_group.as_ref().unwrap(),
@@ -38,16 +39,19 @@ impl<const I: usize> EntityRenderCommand for SetTilemapViewBindGroup<I> {
 }
 
 pub struct SetTilemapTextureBindGroup<const I: usize>;
-impl<const I: usize> EntityRenderCommand for SetTilemapTextureBindGroup<I> {
+impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetTilemapTextureBindGroup<I> {
     type Param = (SRes<ImageBindGroups>, SQuery<Read<TilemapBatch>>);
+    type ViewWorldQuery = ();
+    type ItemWorldQuery = Entity;
 
     fn render<'w>(
-        _view: Entity,
-        item: Entity,
+        _item: &P,
+        _view: (),
+        entity: Entity,
         (image_bind_groups, query_batch): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let tilemap_batch = query_batch.get(item).unwrap();
+        let tilemap_batch = query_batch.get(entity).unwrap();
         let image_bind_groups = image_bind_groups.into_inner();
 
         pass.set_bind_group(
@@ -64,16 +68,19 @@ impl<const I: usize> EntityRenderCommand for SetTilemapTextureBindGroup<I> {
 }
 
 pub struct SetTilemapTileGpuDataBindGroup<const I: usize>;
-impl<const I: usize> EntityRenderCommand for SetTilemapTileGpuDataBindGroup<I> {
+impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetTilemapTileGpuDataBindGroup<I> {
     type Param = (SRes<TilemapMeta>, SQuery<Read<TilemapBatch>>);
+    type ViewWorldQuery = ();
+    type ItemWorldQuery = Entity;
 
     fn render<'w>(
-        _view: Entity,
-        item: Entity,
+        _item: &P,
+        _view: (),
+        entity: Entity,
         (tilemap_meta, query_batch): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let tilemap_batch = query_batch.get(item).unwrap();
+        let tilemap_batch = query_batch.get(entity).unwrap();
         let chunk_meta = tilemap_meta.into_inner().chunks.get(&tilemap_batch.chunk_key).unwrap();
 
         pass.set_bind_group(I, chunk_meta.tilemap_gpu_data_bind_group.as_ref().unwrap(), &[0]);
@@ -83,16 +90,19 @@ impl<const I: usize> EntityRenderCommand for SetTilemapTileGpuDataBindGroup<I> {
 }
 
 pub struct SetVertexBuffer;
-impl EntityRenderCommand for SetVertexBuffer {
+impl<P: BatchedPhaseItem> RenderCommand<P> for SetVertexBuffer {
     type Param = (SRes<TilemapMeta>, SQuery<Read<TilemapBatch>>);
+    type ViewWorldQuery = ();
+    type ItemWorldQuery = Entity;
 
     fn render<'w>(
-        _view: Entity,
-        item: Entity,
+        _item: &P,
+        _view: (),
+        entity: Entity,
         (tilemap_meta, query_batch): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let tilemap_batch = query_batch.get(item).unwrap();
+        let tilemap_batch = query_batch.get(entity).unwrap();
         let chunk_meta = tilemap_meta.into_inner().chunks.get(&tilemap_batch.chunk_key).unwrap();
 
         if let Some(buffer) = chunk_meta.vertices.buffer() {
@@ -106,10 +116,13 @@ impl EntityRenderCommand for SetVertexBuffer {
 pub struct DrawTilemapBatch;
 impl<P: BatchedPhaseItem> RenderCommand<P> for DrawTilemapBatch {
     type Param = ();
+    type ViewWorldQuery = ();
+    type ItemWorldQuery = ();
 
     fn render<'w>(
-        _view: Entity,
         item: &P,
+        _view: (),
+        _entity: (),
         (): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {

@@ -4,7 +4,7 @@ use bevy::{
     render::{
         render_phase::AddRenderCommand,
         render_resource::{Shader, SpecializedRenderPipelines},
-        RenderApp, RenderStage,
+        RenderApp, RenderSet,
     },
 };
 
@@ -16,24 +16,14 @@ use crate::render::{
 #[derive(Default)]
 pub struct SimpleTileMapPlugin;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, StageLabel)]
-enum SimpleTileMapStage {
-    Update,
-}
-
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum TileMapSystem {
     ExtractTilemaps,
 }
 
 impl Plugin for SimpleTileMapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_stage_before(
-            CoreStage::PostUpdate,
-            SimpleTileMapStage::Update,
-            SystemStage::parallel(),
-        )
-        .add_system_to_stage(SimpleTileMapStage::Update, crate::tilemap::update_chunks_system);
+        app.add_system(crate::tilemap::update_chunks_system);
 
         let mut shaders = app.world.get_resource_mut::<Assets<Shader>>().unwrap();
         let sprite_shader = Shader::from_wgsl(include_str!("render/tilemap.wgsl"));
@@ -48,12 +38,14 @@ impl Plugin for SimpleTileMapPlugin {
                 .init_resource::<ExtractedTilemaps>()
                 .init_resource::<TilemapAssetEvents>()
                 .add_render_command::<Transparent2d, DrawTilemap>()
-                .add_system_to_stage(
-                    RenderStage::Extract,
-                    render::extract::extract_tilemaps.label(TileMapSystem::ExtractTilemaps),
+                .add_systems(
+                    (
+                        render::extract::extract_tilemaps.in_set(TileMapSystem::ExtractTilemaps),
+                        render::extract::extract_tilemap_events,
+                    )
+                        .in_schedule(ExtractSchedule),
                 )
-                .add_system_to_stage(RenderStage::Extract, render::extract::extract_tilemap_events)
-                .add_system_to_stage(RenderStage::Queue, render::queue::queue_tilemaps);
+                .add_system(render::queue::queue_tilemaps.in_set(RenderSet::Queue));
         };
     }
 }

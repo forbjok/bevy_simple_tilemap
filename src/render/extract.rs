@@ -53,7 +53,7 @@ pub fn extract_tilemaps(
             &Handle<TextureAtlas>,
         )>,
     >,
-    windows: Extract<Res<Windows>>,
+    window_query: Extract<Query<&Window>>,
     camera_transform_query: Extract<Query<&GlobalTransform, With<Camera2d>>>,
 ) {
     enum Anchor {
@@ -88,7 +88,7 @@ pub fn extract_tilemaps(
         }
     }
 
-    let window = windows.get_primary();
+    let window = window_query.iter().next();
     if window.is_none() {
         return;
     }

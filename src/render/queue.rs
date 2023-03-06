@@ -51,7 +51,7 @@ pub fn queue_tilemaps(
     view_uniforms: Res<ViewUniforms>,
     tilemap_pipeline: Res<TilemapPipeline>,
     mut pipelines: ResMut<SpecializedRenderPipelines<TilemapPipeline>>,
-    mut pipeline_cache: ResMut<PipelineCache>,
+    pipeline_cache: Res<PipelineCache>,
     mut image_bind_groups: ResMut<ImageBindGroups>,
     gpu_images: Res<RenderAssets<Image>>,
     msaa: Res<Msaa>,
@@ -81,8 +81,8 @@ pub fn queue_tilemaps(
         }));
 
         let draw_tilemap_function = draw_functions.read().get_id::<DrawTilemap>().unwrap();
-        let key = TilemapPipelineKey::from_msaa_samples(msaa.samples);
-        let pipeline = pipelines.specialize(&mut pipeline_cache, &tilemap_pipeline, key);
+        let key = TilemapPipelineKey::from_msaa_samples(msaa.samples());
+        let pipeline = pipelines.specialize(&pipeline_cache, &tilemap_pipeline, key);
 
         for mut transparent_phase in views.iter_mut() {
             let tilemaps = &mut extracted_tilemaps.tilemaps;

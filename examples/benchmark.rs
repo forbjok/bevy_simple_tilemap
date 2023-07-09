@@ -17,10 +17,9 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugin(SimpleTileMapPlugin)
-        .add_system(update_tiles_system)
-        .add_system(input_system)
-        .add_startup_system(setup)
+        .add_plugins(SimpleTileMapPlugin)
+        .add_systems(Startup, setup)
+        .add_systems(Update, (input_system, update_tiles_system))
         .run();
 }
 

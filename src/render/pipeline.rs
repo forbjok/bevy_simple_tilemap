@@ -1,4 +1,5 @@
 use bevy::ecs::prelude::*;
+use bevy::ecs::system::SystemState;
 use bevy::render::view::ViewUniform;
 use bevy::render::{render_resource::*, renderer::RenderDevice, texture::BevyDefault};
 
@@ -12,6 +13,7 @@ pub struct TilemapPipeline {
 }
 
 bitflags::bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     #[repr(transparent)]
     // NOTE: Apparently quadro drivers support up to 64x MSAA.
     // MSAA uses the highest 6 bits for the MSAA sample count - 1 to support up to 64x MSAA.
@@ -25,20 +27,22 @@ impl TilemapPipelineKey {
     const MSAA_MASK_BITS: u32 = 0b111111;
     const MSAA_SHIFT_BITS: u32 = 32 - 6;
 
-    pub fn from_msaa_samples(msaa_samples: u32) -> Self {
-        let msaa_bits = ((msaa_samples - 1) & Self::MSAA_MASK_BITS) << Self::MSAA_SHIFT_BITS;
-        TilemapPipelineKey::from_bits(msaa_bits).unwrap()
+    #[inline]
+    pub const fn from_msaa_samples(msaa_samples: u32) -> Self {
+        let msaa_bits = (msaa_samples.trailing_zeros() & Self::MSAA_MASK_BITS) << Self::MSAA_SHIFT_BITS;
+        Self::from_bits_retain(msaa_bits)
     }
 
-    pub fn msaa_samples(&self) -> u32 {
-        ((self.bits >> Self::MSAA_SHIFT_BITS) & Self::MSAA_MASK_BITS) + 1
+    #[inline]
+    pub const fn msaa_samples(&self) -> u32 {
+        1 << ((self.bits() >> Self::MSAA_SHIFT_BITS) & Self::MSAA_MASK_BITS)
     }
 }
 
 impl FromWorld for TilemapPipeline {
     fn from_world(world: &mut World) -> Self {
-        let world = world.cell();
-        let render_device = world.get_resource::<RenderDevice>().unwrap();
+        let mut system_state: SystemState<(Res<RenderDevice>,)> = SystemState::new(world);
+        let (render_device,) = system_state.get_mut(world);
 
         let view_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[BindGroupLayoutEntry {

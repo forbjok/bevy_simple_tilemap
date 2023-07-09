@@ -21,7 +21,7 @@ pub struct Chunk {
 }
 
 bitflags! {
-    #[derive(Default)]
+    #[derive(Clone, Copy, Debug, Default)]
     pub struct TileFlags: u32 {
         const FLIP_X = 1 << 0;
         const FLIP_Y = 1 << 1;

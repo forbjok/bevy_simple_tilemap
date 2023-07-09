@@ -15,10 +15,10 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugin(SimpleTileMapPlugin)
-        .add_system(update_tiles_system.in_schedule(CoreSchedule::FixedUpdate))
-        .add_system(input_system)
-        .add_startup_system(setup)
+        .add_plugins(SimpleTileMapPlugin)
+        .add_systems(Startup, setup)
+        .add_systems(Update, input_system)
+        .add_systems(FixedUpdate, update_tiles_system)
         .insert_resource(FixedTime::new_from_secs(0.5))
         .run();
 }

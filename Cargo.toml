@@ -9,6 +9,10 @@ repository = "https://github.com/forbjok/bevy_simple_tilemap.git"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["rayon"]
+rayon = ["dep:rayon"]
+
 [dependencies]
 bitflags = "2.3.3"
 bytemuck = "1.13.1"
@@ -29,4 +33,4 @@ default-features = false
 features = ["x11", "png"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rayon = "1.7.0"
+rayon = { version = "1.7.0", optional = true }

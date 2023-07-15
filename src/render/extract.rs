@@ -8,7 +8,7 @@ use bevy::render::{texture::Image, view::ComputedVisibility};
 use bevy::sprite::TextureAtlas;
 use bevy::transform::components::GlobalTransform;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "rayon"))]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use crate::tilemap::{row_major_pos, CHUNK_HEIGHT, CHUNK_WIDTH};
@@ -165,7 +165,9 @@ pub fn extract_tilemaps(
 
                 #[cfg(target_arch = "wasm32")]
                 let chunk_iter = chunks.iter();
-                #[cfg(not(target_arch = "wasm32"))]
+                #[cfg(all(not(target_arch = "wasm32"), not(feature = "rayon")))]
+                let chunk_iter = chunks.iter();
+                #[cfg(all(not(target_arch = "wasm32"), feature = "rayon"))]
                 let chunk_iter = chunks.par_iter();
 
                 // Extract chunks
@@ -180,7 +182,9 @@ pub fn extract_tilemaps(
 
                         #[cfg(target_arch = "wasm32")]
                         let tile_iter = chunk.tiles.iter();
-                        #[cfg(not(target_arch = "wasm32"))]
+                        #[cfg(all(not(target_arch = "wasm32"), not(feature = "rayon")))]
+                        let tile_iter = chunk.tiles.iter();
+                        #[cfg(all(not(target_arch = "wasm32"), feature = "rayon"))]
                         let tile_iter = chunk.tiles.par_iter();
 
                         let tiles: Vec<ExtractedTile> = tile_iter

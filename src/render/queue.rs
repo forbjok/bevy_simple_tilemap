@@ -16,7 +16,7 @@ use bevy::render::{
 
 use bevy::utils::FloatOrd;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "rayon"))]
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::TileFlags;
@@ -141,7 +141,9 @@ pub fn queue_tilemaps(
 
                 #[cfg(target_arch = "wasm32")]
                 let chonk_iter = chonks.into_iter();
-                #[cfg(not(target_arch = "wasm32"))]
+                #[cfg(all(not(target_arch = "wasm32"), not(feature = "rayon")))]
+                let chonk_iter = chonks.into_iter();
+                #[cfg(all(not(target_arch = "wasm32"), feature = "rayon"))]
                 let chonk_iter = chonks.into_par_iter();
 
                 // Process extracted chunks in parallel, updating their metadata.

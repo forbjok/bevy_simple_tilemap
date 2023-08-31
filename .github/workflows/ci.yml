@@ -40,12 +40,10 @@ jobs:
         sudo apt-get install -y libasound2-dev libudev-dev
 
     - name: Install Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: ${{ matrix.toolchain }}
-        target: ${{ matrix.target }}
-        profile: minimal
-        override: true
+        targets: ${{ matrix.target }}
 
     - name: Run tests
       run: cargo test ${{ matrix.options }} --verbose

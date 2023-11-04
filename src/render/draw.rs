@@ -1,9 +1,8 @@
 use super::*;
-use bevy::asset::Handle;
 use bevy::ecs::system::lifetimeless::*;
 use bevy::ecs::system::SystemParamItem;
 use bevy::render::render_phase::PhaseItem;
-use bevy::render::render_phase::{BatchedPhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline};
+use bevy::render::render_phase::{RenderCommand, RenderCommandResult, SetItemPipeline};
 use bevy::render::{render_phase::TrackedRenderPass, view::ViewUniformOffset};
 
 pub type DrawTilemap = (
@@ -56,10 +55,7 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetTilemapTextureBindGro
 
         pass.set_bind_group(
             I,
-            image_bind_groups
-                .values
-                .get(&Handle::weak(tilemap_batch.image_handle_id))
-                .unwrap(),
+            image_bind_groups.values.get(&tilemap_batch.image_handle_id).unwrap(),
             &[],
         );
 
@@ -90,7 +86,7 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetTilemapTileGpuDataBin
 }
 
 pub struct SetVertexBuffer;
-impl<P: BatchedPhaseItem> RenderCommand<P> for SetVertexBuffer {
+impl<P: PhaseItem> RenderCommand<P> for SetVertexBuffer {
     type Param = (SRes<TilemapMeta>, SQuery<Read<TilemapBatch>>);
     type ViewWorldQuery = ();
     type ItemWorldQuery = Entity;
@@ -114,19 +110,20 @@ impl<P: BatchedPhaseItem> RenderCommand<P> for SetVertexBuffer {
 }
 
 pub struct DrawTilemapBatch;
-impl<P: BatchedPhaseItem> RenderCommand<P> for DrawTilemapBatch {
+impl<P: PhaseItem> RenderCommand<P> for DrawTilemapBatch {
     type Param = ();
     type ViewWorldQuery = ();
-    type ItemWorldQuery = ();
+    type ItemWorldQuery = Read<TilemapBatch>;
 
     fn render<'w>(
-        item: &P,
+        _item: &P,
         _view: (),
-        _entity: (),
+        batch: &'_ TilemapBatch,
         (): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        pass.draw(item.batch_range().as_ref().unwrap().clone(), 0..1);
+        pass.draw(batch.range.clone(), 0..1);
+        //pass.draw_indexed(0..1, 0, batch.range.clone());
 
         RenderCommandResult::Success
     }

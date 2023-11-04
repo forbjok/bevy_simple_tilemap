@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use bevy::asset::{AssetEvent, Handle};
+use bevy::asset::AssetEvent;
 use bevy::core_pipeline::core_2d::Transparent2d;
 use bevy::ecs::prelude::*;
 use bevy::math::Vec2;
@@ -62,23 +62,24 @@ pub fn queue_tilemaps(
     // If an image has changed, the GpuImage has (probably) changed
     for event in &events.images {
         match event {
-            AssetEvent::Created { .. } => None,
-            AssetEvent::Modified { handle } => image_bind_groups.values.remove(handle),
-            AssetEvent::Removed { handle } => image_bind_groups.values.remove(handle),
+            AssetEvent::Added { .. } | AssetEvent::LoadedWithDependencies { .. } => {}
+            AssetEvent::Modified { id } | AssetEvent::Removed { id } => {
+                image_bind_groups.values.remove(id);
+            }
         };
     }
 
     if let Some(view_binding) = view_uniforms.uniforms.binding() {
         let tilemap_meta = &mut tilemap_meta;
 
-        tilemap_meta.view_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
-            entries: &[BindGroupEntry {
+        tilemap_meta.view_bind_group = Some(render_device.create_bind_group(
+            Some("tilemap_view_bind_group"),
+            &tilemap_pipeline.view_layout,
+            &[BindGroupEntry {
                 binding: 0,
                 resource: view_binding,
             }],
-            label: Some("tilemap_view_bind_group"),
-            layout: &tilemap_pipeline.view_layout,
-        }));
+        ));
 
         let draw_tilemap_function = draw_functions.read().get_id::<DrawTilemap>().unwrap();
         let key = TilemapPipelineKey::from_msaa_samples(msaa.samples());
@@ -92,21 +93,22 @@ pub fn queue_tilemaps(
 
             let mut visible_chunks: Vec<(Entity, IVec3)> = Vec::new();
             let mut tilemap_transforms: HashMap<Entity, GlobalTransform> = HashMap::default();
-            let mut tilemap_image_handle_ids: HashMap<Entity, HandleId> = HashMap::default();
+            let mut tilemap_image_handle_ids: HashMap<Entity, AssetId<Image>> = HashMap::default();
 
             for tilemap in tilemaps.iter_mut() {
                 let image_size;
-
                 // Set-up a new possible batch
-                if let Some(gpu_image) = gpu_images.get(&Handle::weak(tilemap.image_handle_id)) {
+                if let Some(gpu_image) = gpu_images.get(tilemap.image_handle_id) {
                     image_size = gpu_image.size;
 
                     image_bind_groups
                         .values
-                        .entry(Handle::weak(tilemap.image_handle_id))
+                        .entry(tilemap.image_handle_id)
                         .or_insert_with(|| {
-                            render_device.create_bind_group(&BindGroupDescriptor {
-                                entries: &[
+                            render_device.create_bind_group(
+                                Some("tilemap_material_bind_group"),
+                                &tilemap_pipeline.material_layout,
+                                &[
                                     BindGroupEntry {
                                         binding: 0,
                                         resource: BindingResource::TextureView(&gpu_image.texture_view),
@@ -116,9 +118,7 @@ pub fn queue_tilemaps(
                                         resource: BindingResource::Sampler(&gpu_image.sampler),
                                     },
                                 ],
-                                label: Some("tilemap_material_bind_group"),
-                                layout: &tilemap_pipeline.material_layout,
-                            })
+                            )
                         });
                 } else {
                     // Skip this item if the texture is not ready
@@ -248,13 +248,6 @@ pub fn queue_tilemaps(
             for (key, tilemap_transform, chunk_meta) in sorted_chunks.into_iter() {
                 let (tilemap_entity, _) = key;
 
-                let batch = TilemapBatch {
-                    chunk_key: *key,
-                    image_handle_id: *tilemap_image_handle_ids.get(tilemap_entity).unwrap(),
-                };
-
-                let batch_entity = commands.spawn((batch,)).id();
-
                 chunk_meta.tilemap_gpu_data.clear();
                 chunk_meta.tilemap_gpu_data.push(TilemapGpuData {
                     transform: tilemap_transform.compute_matrix(),
@@ -265,14 +258,14 @@ pub fn queue_tilemaps(
                 chunk_meta.tilemap_gpu_data.write_buffer(&render_device, &render_queue);
                 chunk_meta.vertices.write_buffer(&render_device, &render_queue);
 
-                chunk_meta.tilemap_gpu_data_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
-                    entries: &[BindGroupEntry {
+                chunk_meta.tilemap_gpu_data_bind_group = Some(render_device.create_bind_group(
+                    Some("tilemap_gpu_data_bind_group"),
+                    &tilemap_pipeline.tilemap_gpu_data_layout,
+                    &[BindGroupEntry {
                         binding: 0,
                         resource: chunk_meta.tilemap_gpu_data.binding().unwrap(),
                     }],
-                    label: Some("tilemap_gpu_data_bind_group"),
-                    layout: &tilemap_pipeline.tilemap_gpu_data_layout,
-                }));
+                ));
 
                 let translation = tilemap_transform.translation();
 
@@ -281,12 +274,21 @@ pub fn queue_tilemaps(
 
                 let vertex_count = chunk_meta.vertices.len() as u32;
 
+                let batch = TilemapBatch {
+                    chunk_key: *key,
+                    image_handle_id: *tilemap_image_handle_ids.get(tilemap_entity).unwrap(),
+                    range: 0..vertex_count,
+                };
+
+                let batch_entity = commands.spawn((batch,)).id();
+
                 transparent_phase.add(Transparent2d {
                     draw_function: draw_tilemap_function,
                     pipeline,
                     entity: batch_entity,
                     sort_key,
-                    batch_range: Some(0..vertex_count),
+                    batch_range: 0..1,
+                    dynamic_offset: None,
                 });
             }
         }

@@ -8,7 +8,8 @@ pub struct TileMapBundle {
     pub tilemap_cache: TileMapCache,
     pub texture_atlas: Handle<TextureAtlas>,
     pub visibility: Visibility,
+    pub inherited_visibility: InheritedVisibility,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
-    pub computed_visibility: ComputedVisibility,
+    pub view_visibility: ViewVisibility,
 }

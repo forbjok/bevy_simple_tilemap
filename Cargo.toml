@@ -10,23 +10,24 @@ repository = "https://github.com/forbjok/bevy_simple_tilemap.git"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bitflags = "2.3.3"
-bytemuck = "1.13.1"
+bitflags = "2.4.1"
+bytemuck = "1.14.0"
 
 [dependencies.bevy]
-version = "0.11.0"
+version = "0.12.0"
 default-features = false
 features = [
-  "bevy_render",
-  "bevy_core_pipeline",
-  "bevy_sprite",
   "bevy_asset",
+  "bevy_core_pipeline",
+  "bevy_render",
+  "bevy_sprite",
+  "multi-threaded",
 ]
 
 [dev-dependencies.bevy]
-version = "0.11.0"
+version = "0.12.0"
 default-features = false
 features = ["x11", "png"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rayon = "1.7.0"
+rayon = "1.8.0"

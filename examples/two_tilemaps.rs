@@ -23,7 +23,7 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, input_system)
         .add_systems(FixedUpdate, (update_tiles1_system, update_tiles2_system))
-        .insert_resource(FixedTime::new_from_secs(0.05))
+        .insert_resource(Time::<Fixed>::from_seconds(0.05))
         .run();
 }
 

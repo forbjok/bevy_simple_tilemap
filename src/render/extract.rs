@@ -3,8 +3,8 @@ use std::ops::Mul;
 use bevy::asset::{AssetEvent, Assets, Handle};
 use bevy::ecs::prelude::*;
 use bevy::prelude::*;
+use bevy::render::texture::Image;
 use bevy::render::Extract;
-use bevy::render::{texture::Image, view::ComputedVisibility};
 use bevy::sprite::TextureAtlas;
 use bevy::transform::components::GlobalTransform;
 
@@ -23,19 +23,8 @@ pub fn extract_tilemap_events(
     let TilemapAssetEvents { ref mut images } = *events;
     images.clear();
 
-    for image in image_events.iter() {
-        // AssetEvent: !Clone
-        images.push(match image {
-            AssetEvent::Created { handle } => AssetEvent::Created {
-                handle: handle.clone_weak(),
-            },
-            AssetEvent::Modified { handle } => AssetEvent::Modified {
-                handle: handle.clone_weak(),
-            },
-            AssetEvent::Removed { handle } => AssetEvent::Removed {
-                handle: handle.clone_weak(),
-            },
-        });
+    for event in image_events.read() {
+        images.push(*event);
     }
 }
 
@@ -47,7 +36,7 @@ pub fn extract_tilemaps(
     tilemap_query: Extract<
         Query<(
             Entity,
-            &ComputedVisibility,
+            &ViewVisibility,
             &TileMap,
             &GlobalTransform,
             &Handle<TextureAtlas>,
@@ -118,8 +107,8 @@ pub fn extract_tilemaps(
 
     extracted_tilemaps.tilemaps.clear();
 
-    for (entity, computed_visibility, tilemap, transform, texture_atlas_handle) in tilemap_query.iter() {
-        if !computed_visibility.is_visible() {
+    for (entity, view_visibility, tilemap, transform, texture_atlas_handle) in tilemap_query.iter() {
+        if !view_visibility.get() {
             continue;
         }
 
@@ -134,8 +123,6 @@ pub fn extract_tilemaps(
 
                 let chunk_pixel_size = Vec2::new(CHUNK_WIDTH as f32, CHUNK_HEIGHT as f32) * tile_size;
                 let chunk_pixel_size = chunk_pixel_size * scale.truncate();
-
-                let chunks_changed_at = &mut extracted_tilemaps.chunks_changed_at;
 
                 let chunk_iter = tilemap.chunks.iter();
 
@@ -171,13 +158,6 @@ pub fn extract_tilemaps(
                 // Extract chunks
                 let chunks: Vec<ExtractedChunk> = chunk_iter
                     .filter_map(|chunk| {
-                        // If chunk has not changed since last extraction, skip it.
-                        if let Some(chunk_changed_at) = chunks_changed_at.get(&(entity, chunk.origin)) {
-                            if chunk.last_change_at <= *chunk_changed_at {
-                                return None;
-                            }
-                        }
-
                         #[cfg(target_arch = "wasm32")]
                         let tile_iter = chunk.tiles.iter();
                         #[cfg(not(target_arch = "wasm32"))]
@@ -208,11 +188,6 @@ pub fn extract_tilemaps(
                         })
                     })
                     .collect();
-
-                // Update chunk change timestamps
-                for ec in chunks.iter() {
-                    chunks_changed_at.insert((entity, ec.origin), ec.last_change_at);
-                }
 
                 extracted_tilemaps.tilemaps.push(ExtractedTilemap {
                     entity,

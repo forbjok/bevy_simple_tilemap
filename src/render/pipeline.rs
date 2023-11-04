@@ -123,13 +123,13 @@ impl SpecializedRenderPipeline for TilemapPipeline {
 
         RenderPipelineDescriptor {
             vertex: VertexState {
-                shader: TILEMAP_SHADER_HANDLE.typed::<Shader>(),
+                shader: TILEMAP_SHADER_HANDLE,
                 entry_point: "vertex".into(),
                 shader_defs: shader_defs.clone(),
                 buffers: vec![vertex_buffer_layout],
             },
             fragment: Some(FragmentState {
-                shader: TILEMAP_SHADER_HANDLE.typed::<Shader>(),
+                shader: TILEMAP_SHADER_HANDLE,
                 shader_defs,
                 entry_point: "fragment".into(),
                 targets: vec![Some(ColorTargetState {

@@ -1,10 +1,8 @@
+use std::ops::Range;
+
 use bevy::{
-    asset::HandleId,
     math::{IVec2, IVec3, Mat4, Vec2},
-    prelude::{
-        AssetEvent, Color, Component, Entity, GlobalTransform, Handle, HandleUntyped, Image, Rect, Resource, Shader,
-    },
-    reflect::TypeUuid,
+    prelude::{AssetEvent, AssetId, Color, Component, Entity, GlobalTransform, Handle, Image, Rect, Resource, Shader},
     render::render_resource::{BindGroup, BufferUsages, BufferVec, DynamicUniformBuffer, ShaderType},
     utils::{HashMap, Instant},
 };
@@ -17,7 +15,7 @@ pub mod extract;
 pub mod pipeline;
 pub mod queue;
 
-pub const TILEMAP_SHADER_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 9765236402292098257);
+pub const TILEMAP_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(9765236402292098257);
 
 pub struct ExtractedTile {
     pub pos: IVec2,
@@ -35,7 +33,7 @@ pub struct ExtractedChunk {
 pub struct ExtractedTilemap {
     pub entity: Entity,
     pub transform: GlobalTransform,
-    pub image_handle_id: HandleId,
+    pub image_handle_id: AssetId<Image>,
     pub tile_size: Vec2,
     pub atlas_size: Vec2,
     pub chunks: Vec<ExtractedChunk>,
@@ -45,7 +43,6 @@ pub struct ExtractedTilemap {
 #[derive(Default, Resource)]
 pub struct ExtractedTilemaps {
     pub tilemaps: Vec<ExtractedTilemap>,
-    pub chunks_changed_at: HashMap<ChunkKey, Instant>,
 }
 
 #[derive(Default, Resource)]
@@ -98,13 +95,14 @@ pub struct TilemapMeta {
     view_bind_group: Option<BindGroup>,
 }
 
-#[derive(Component, PartialEq, Copy, Clone, Eq)]
+#[derive(Component, PartialEq, Clone, Eq)]
 pub struct TilemapBatch {
-    image_handle_id: HandleId,
+    image_handle_id: AssetId<Image>,
+    range: Range<u32>,
     chunk_key: (Entity, IVec3),
 }
 
 #[derive(Default, Resource)]
 pub struct ImageBindGroups {
-    values: HashMap<Handle<Image>, BindGroup>,
+    values: HashMap<AssetId<Image>, BindGroup>,
 }

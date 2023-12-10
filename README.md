@@ -40,7 +40,7 @@ fn setup(
     };
 
     // Spawn tilemap
-    commands.spawn_bundle(tilemap_bundle);
+    commands.spawn(tilemap_bundle);
 }
 ```
 

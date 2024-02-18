@@ -6,7 +6,8 @@ use crate::tilemap::{TileMap, TileMapCache};
 pub struct TileMapBundle {
     pub tilemap: TileMap,
     pub tilemap_cache: TileMapCache,
-    pub texture_atlas: Handle<TextureAtlas>,
+    pub texture: Handle<Image>,
+    pub atlas: TextureAtlas,
     pub visibility: Visibility,
     pub inherited_visibility: InheritedVisibility,
     pub transform: Transform,

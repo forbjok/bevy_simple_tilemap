@@ -1,5 +1,6 @@
 use bevy::ecs::prelude::*;
 use bevy::ecs::system::SystemState;
+use bevy::render::render_resource::binding_types::{sampler, texture_2d, uniform_buffer};
 use bevy::render::view::ViewUniform;
 use bevy::render::{render_resource::*, renderer::RenderDevice, texture::BevyDefault};
 
@@ -44,55 +45,29 @@ impl FromWorld for TilemapPipeline {
         let mut system_state: SystemState<(Res<RenderDevice>,)> = SystemState::new(world);
         let (render_device,) = system_state.get_mut(world);
 
-        let view_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[BindGroupLayoutEntry {
-                binding: 0,
-                visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
-                ty: BindingType::Buffer {
-                    ty: BufferBindingType::Uniform,
-                    has_dynamic_offset: true,
-                    min_binding_size: Some(ViewUniform::min_size()),
-                },
-                count: None,
-            }],
-            label: Some("tilemap_view_layout"),
-        });
+        let view_layout = render_device.create_bind_group_layout(
+            "tilemap_view_layout",
+            &BindGroupLayoutEntries::single(ShaderStages::VERTEX_FRAGMENT, uniform_buffer::<ViewUniform>(true)),
+        );
 
-        let material_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[
-                BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Texture {
-                        multisampled: false,
-                        sample_type: TextureSampleType::Float { filterable: true },
-                        view_dimension: TextureViewDimension::D2,
-                    },
-                    count: None,
-                },
-                BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Sampler(SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-            label: Some("tilemap_material_layout"),
-        });
+        let material_layout = render_device.create_bind_group_layout(
+            "tilemap_material_layout",
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::FRAGMENT,
+                (
+                    texture_2d(TextureSampleType::Float { filterable: true }),
+                    sampler(SamplerBindingType::Filtering),
+                ),
+            ),
+        );
 
-        let tilemap_gpu_data_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[BindGroupLayoutEntry {
-                binding: 0,
-                visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
-                ty: BindingType::Buffer {
-                    ty: BufferBindingType::Uniform,
-                    has_dynamic_offset: true,
-                    min_binding_size: Some(TilemapGpuData::min_size()),
-                },
-                count: None,
-            }],
-            label: Some("tilemap_tilemap_gpu_data_layout"),
-        });
+        let tilemap_gpu_data_layout = render_device.create_bind_group_layout(
+            "tilemap_tilemap_gpu_data_layout",
+            &BindGroupLayoutEntries::sequential(
+                ShaderStages::VERTEX_FRAGMENT,
+                (uniform_buffer::<TilemapGpuData>(true),),
+            ),
+        );
 
         Self {
             view_layout,

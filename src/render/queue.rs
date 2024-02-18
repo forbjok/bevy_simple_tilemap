@@ -62,7 +62,7 @@ pub fn queue_tilemaps(
     // If an image has changed, the GpuImage has (probably) changed
     for event in &events.images {
         match event {
-            AssetEvent::Added { .. } | AssetEvent::LoadedWithDependencies { .. } => {}
+            AssetEvent::Added { .. } | AssetEvent::Unused { .. } | AssetEvent::LoadedWithDependencies { .. } => {}
             AssetEvent::Modified { id } | AssetEvent::Removed { id } => {
                 image_bind_groups.values.remove(id);
             }
@@ -249,7 +249,7 @@ pub fn queue_tilemaps(
                 let (tilemap_entity, _) = key;
 
                 chunk_meta.tilemap_gpu_data.clear();
-                chunk_meta.tilemap_gpu_data.push(TilemapGpuData {
+                chunk_meta.tilemap_gpu_data.push(&TilemapGpuData {
                     transform: tilemap_transform.compute_matrix(),
                     tile_size: chunk_meta.tile_size,
                     texture_size: chunk_meta.texture_size,

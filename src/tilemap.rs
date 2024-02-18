@@ -104,8 +104,7 @@ impl TileMap {
     }
 
     pub fn set_tiles(&mut self, tiles: impl IntoIterator<Item = (IVec3, Option<Tile>)>) {
-        self.tile_changes
-            .extend(tiles.into_iter().map(|(pos, tile)| (pos, tile)));
+        self.tile_changes.extend(tiles.into_iter());
     }
 }
 

@@ -29,13 +29,17 @@ fn setup(
   mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     // Load tilesheet texture and make a texture atlas from it
-    let texture_handle = asset_server.load("textures/tilesheet.png");
-    let texture_atlas = TextureAtlas::from_grid(texture_handle, vec2(16.0, 16.0), 4, 1, Some(vec2(1.0, 1.0)), None);
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+    let texture = asset_server.load("textures/tilesheet.png");
+    let atlas = TextureAtlasLayout::from_grid(vec2(16.0, 16.0), 4, 1, Some(vec2(1.0, 1.0)), None);
+    let texture_atlas = texture_atlases.add(atlas);
 
     // Set up tilemap
     let tilemap_bundle = TileMapBundle {
-        texture_atlas: texture_atlas_handle.clone(),
+        texture,
+        atlas: TextureAtlas {
+            layout: texture_atlas,
+            ..Default::default()
+        },
         ..Default::default()
     };
 

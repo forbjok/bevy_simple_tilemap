@@ -31,7 +31,7 @@ bitflags! {
 #[derive(Clone, Debug, Default)]
 pub struct Tile {
     pub sprite_index: u32,
-    pub color: Color,
+    pub color: LegacyColor,
     pub flags: TileFlags,
 }
 

@@ -157,6 +157,8 @@ pub fn queue_tilemaps(
                         chunk_meta.texture_size = image_size;
                         chunk_meta.vertices.clear();
 
+                        let image_size = image_size.as_vec2();
+
                         let z = chunk.origin.z as f32;
 
                         for tile in chunk.tiles.iter() {
@@ -175,7 +177,7 @@ pub fn queue_tilemaps(
                             let tile_uvs = uvs;
 
                             // If a rect is specified, adjust UVs and the size of the quad
-                            let rect = tile.rect;
+                            let rect = tile.rect.as_rect();
                             let quad_size = rect.size();
                             for uv in &mut uvs {
                                 *uv = (rect.min + *uv * quad_size) / image_size;
@@ -251,8 +253,8 @@ pub fn queue_tilemaps(
                 chunk_meta.tilemap_gpu_data.clear();
                 chunk_meta.tilemap_gpu_data.push(&TilemapGpuData {
                     transform: tilemap_transform.compute_matrix(),
-                    tile_size: chunk_meta.tile_size,
-                    texture_size: chunk_meta.texture_size,
+                    tile_size: chunk_meta.tile_size.as_vec2(),
+                    texture_size: chunk_meta.texture_size.as_vec2(),
                 });
 
                 chunk_meta.tilemap_gpu_data.write_buffer(&render_device, &render_queue);

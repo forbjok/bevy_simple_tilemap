@@ -1,8 +1,4 @@
-use bevy::{
-    math::{uvec2, vec2},
-    prelude::*,
-    window::WindowResolution,
-};
+use bevy::{math::uvec2, prelude::*, window::WindowResolution};
 
 use bevy_simple_tilemap::prelude::*;
 

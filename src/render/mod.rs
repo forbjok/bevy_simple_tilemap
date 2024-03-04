@@ -1,12 +1,10 @@
 use std::ops::Range;
 
 use bevy::{
+    color::LinearRgba,
     math::{IVec2, IVec3, Mat4, URect, UVec2, Vec2},
     prelude::{AssetEvent, AssetId, Component, Entity, GlobalTransform, Handle, Image, Resource, Shader},
-    render::{
-        color::LegacyColor,
-        render_resource::{BindGroup, BufferUsages, BufferVec, DynamicUniformBuffer, ShaderType},
-    },
+    render::render_resource::{BindGroup, BufferUsages, BufferVec, DynamicUniformBuffer, ShaderType},
     utils::{HashMap, Instant},
 };
 use bytemuck::{Pod, Zeroable};
@@ -23,7 +21,7 @@ pub const TILEMAP_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(9765236
 pub struct ExtractedTile {
     pub pos: IVec2,
     pub rect: URect,
-    pub color: LegacyColor,
+    pub color: LinearRgba,
     pub flags: TileFlags,
 }
 
@@ -59,7 +57,7 @@ struct TilemapVertex {
     pub position: [f32; 3],
     pub uv: [f32; 2],
     pub tile_uv: [f32; 2],
-    pub color: u32,
+    pub color: [f32; 4],
 }
 
 #[repr(C)]

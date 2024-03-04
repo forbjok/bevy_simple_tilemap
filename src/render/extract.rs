@@ -174,7 +174,7 @@ pub fn extract_tilemaps(
                                     Some(ExtractedTile {
                                         pos: chunk.origin.truncate() + row_major_pos(i),
                                         rect,
-                                        color: tile.color,
+                                        color: tile.color.into(),
                                         flags: tile.flags,
                                     })
                                 } else {

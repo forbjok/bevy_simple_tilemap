@@ -190,12 +190,7 @@ pub fn queue_tilemaps(
                                 .map(|quad_pos| (tile_pos + (quad_pos * quad_size)).extend(z).into());
 
                             // Store the vertex data and add the item to the render phase
-                            let color = tile.color.as_linear_rgba_f32();
-                            // encode color as a single u32 to save space
-                            let color = (color[0] * 255.0) as u32
-                                | ((color[1] * 255.0) as u32) << 8
-                                | ((color[2] * 255.0) as u32) << 16
-                                | ((color[3] * 255.0) as u32) << 24;
+                            let color = tile.color.to_f32_array();
 
                             for i in QUAD_INDICES.iter() {
                                 chunk_meta.vertices.push(TilemapVertex {

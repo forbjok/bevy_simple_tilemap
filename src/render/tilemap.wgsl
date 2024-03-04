@@ -28,14 +28,14 @@ fn vertex(
     @location(0) vertex_position: vec3<f32>,
     @location(1) vertex_uv: vec2<f32>,
     @location(2) vertex_tile_uv: vec2<f32>,
-    @location(3) vertex_color: u32,
+    @location(3) vertex_color: vec4<f32>,
 ) -> VertexOutput {
     var out: VertexOutput;
 
     out.uv = vertex_uv;
     out.tile_uv = vertex_tile_uv;
     out.position = view.view_proj * tilemap.transform * vec4<f32>(vertex_position, 1.0);
-    out.color = vec4<f32>((vec4<u32>(vertex_color) >> vec4<u32>(0u, 8u, 16u, 24u)) & vec4<u32>(255u)) / 255.0;
+    out.color = vertex_color;
 
     return out;
 }
@@ -68,7 +68,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         uv_offset.y = -half_texture_pixel_size_v;
     }
 
-    var color = textureSample(sprite_texture, sprite_sampler, in.uv + uv_offset) * in.color;
+    var color = in.color * textureSample(sprite_texture, sprite_sampler, in.uv + uv_offset);
 
     return color;
 }

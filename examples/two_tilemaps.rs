@@ -1,5 +1,5 @@
 use bevy::{
-    math::{ivec2, uvec2, vec2},
+    math::{ivec2, uvec2},
     prelude::*,
     window::WindowResolution,
 };

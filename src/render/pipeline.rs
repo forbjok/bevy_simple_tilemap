@@ -89,7 +89,7 @@ impl SpecializedRenderPipeline for TilemapPipeline {
             // Tile UV
             VertexFormat::Float32x2,
             // Color
-            VertexFormat::Uint32,
+            VertexFormat::Float32x4,
         ];
 
         let vertex_buffer_layout = VertexBufferLayout::from_vertex_formats(VertexStepMode::Vertex, vertex_formats);

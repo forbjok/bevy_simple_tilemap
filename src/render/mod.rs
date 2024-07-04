@@ -1,10 +1,11 @@
 use std::ops::Range;
 
 use bevy::{
-    math::{IVec2, IVec3, Mat4, Vec2},
-    prelude::{AssetEvent, AssetId, Color, Component, Entity, GlobalTransform, Handle, Image, Rect, Resource, Shader},
-    render::render_resource::{BindGroup, BufferUsages, BufferVec, DynamicUniformBuffer, ShaderType},
-    utils::{HashMap, Instant},
+    color::LinearRgba,
+    math::{IVec2, IVec3, Mat4, URect, UVec2, Vec2},
+    prelude::{AssetEvent, AssetId, Component, Entity, GlobalTransform, Handle, Image, Resource, Shader},
+    render::render_resource::{BindGroup, BufferUsages, DynamicUniformBuffer, RawBufferVec, ShaderType},
+    utils::HashMap,
 };
 use bytemuck::{Pod, Zeroable};
 
@@ -19,23 +20,21 @@ pub const TILEMAP_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(9765236
 
 pub struct ExtractedTile {
     pub pos: IVec2,
-    pub rect: Rect,
-    pub color: Color,
+    pub rect: URect,
+    pub color: LinearRgba,
     pub flags: TileFlags,
 }
 
 pub struct ExtractedChunk {
     pub origin: IVec3,
     pub tiles: Vec<ExtractedTile>,
-    pub last_change_at: Instant,
 }
 
 pub struct ExtractedTilemap {
     pub entity: Entity,
     pub transform: GlobalTransform,
     pub image_handle_id: AssetId<Image>,
-    pub tile_size: Vec2,
-    pub atlas_size: Vec2,
+    pub tile_size: UVec2,
     pub chunks: Vec<ExtractedChunk>,
     pub visible_chunks: Vec<IVec3>,
 }
@@ -56,7 +55,7 @@ struct TilemapVertex {
     pub position: [f32; 3],
     pub uv: [f32; 2],
     pub tile_uv: [f32; 2],
-    pub color: u32,
+    pub color: [f32; 4],
 }
 
 #[repr(C)]
@@ -68,21 +67,21 @@ pub struct TilemapGpuData {
 }
 
 pub struct ChunkMeta {
-    vertices: BufferVec<TilemapVertex>,
+    vertices: RawBufferVec<TilemapVertex>,
     tilemap_gpu_data: DynamicUniformBuffer<TilemapGpuData>,
     tilemap_gpu_data_bind_group: Option<BindGroup>,
-    texture_size: Vec2,
-    tile_size: Vec2,
+    texture_size: UVec2,
+    tile_size: UVec2,
 }
 
 impl Default for ChunkMeta {
     fn default() -> Self {
         Self {
-            vertices: BufferVec::new(BufferUsages::VERTEX),
+            vertices: RawBufferVec::new(BufferUsages::VERTEX),
             tilemap_gpu_data: DynamicUniformBuffer::default(),
             tilemap_gpu_data_bind_group: None,
-            texture_size: Vec2::ZERO,
-            tile_size: Vec2::ZERO,
+            texture_size: UVec2::ZERO,
+            tile_size: UVec2::ZERO,
         }
     }
 }

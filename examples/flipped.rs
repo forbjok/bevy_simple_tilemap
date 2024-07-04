@@ -1,5 +1,5 @@
 use bevy::{
-    math::{ivec3, vec2},
+    math::{ivec3, uvec2},
     prelude::*,
     window::WindowResolution,
 };
@@ -73,7 +73,7 @@ fn setup(
 ) {
     // Load tilesheet texture and make a texture atlas from it
     let texture = asset_server.load("textures/tilesheet.png");
-    let atlas = TextureAtlasLayout::from_grid(vec2(16.0, 16.0), 4, 1, Some(vec2(1.0, 1.0)), None);
+    let atlas = TextureAtlasLayout::from_grid(uvec2(16, 16), 4, 1, Some(uvec2(1, 1)), None);
     let texture_atlas = texture_atlases.add(atlas);
 
     let tiles = vec![

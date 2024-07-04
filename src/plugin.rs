@@ -5,13 +5,17 @@ use bevy::{
     render::{
         render_phase::AddRenderCommand,
         render_resource::{Shader, SpecializedRenderPipelines},
+        view::{check_visibility, VisibilitySystems},
         Render, RenderApp, RenderSet,
     },
 };
 
-use crate::render::{
-    self, draw::DrawTilemap, pipeline::TilemapPipeline, ExtractedTilemaps, ImageBindGroups, TilemapAssetEvents,
-    TilemapMeta, TILEMAP_SHADER_HANDLE,
+use crate::{
+    render::{
+        self, draw::DrawTilemap, pipeline::TilemapPipeline, ExtractedTilemaps, ImageBindGroups, TilemapAssetEvents,
+        TilemapMeta, TILEMAP_SHADER_HANDLE,
+    },
+    tilemap::WithTileMap,
 };
 
 #[derive(Default)]
@@ -28,7 +32,12 @@ impl Plugin for SimpleTileMapPlugin {
 
         load_internal_asset!(app, TILEMAP_SHADER_HANDLE, "render/tilemap.wgsl", Shader::from_wgsl);
 
-        if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
+        app.add_systems(
+            PostUpdate,
+            check_visibility::<WithTileMap>.in_set(VisibilitySystems::CheckVisibility),
+        );
+
+        if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app
                 .init_resource::<ImageBindGroups>()
                 .init_resource::<SpecializedRenderPipelines<TilemapPipeline>>()
@@ -48,7 +57,7 @@ impl Plugin for SimpleTileMapPlugin {
     }
 
     fn finish(&self, app: &mut App) {
-        if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
+        if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app.init_resource::<TilemapPipeline>();
         }
     }

@@ -2,6 +2,7 @@ use std::ops::Mul;
 
 use bevy::asset::{AssetEvent, Assets};
 use bevy::ecs::prelude::*;
+use bevy::math::uvec2;
 use bevy::prelude::*;
 use bevy::render::texture::Image;
 use bevy::render::Extract;
@@ -120,10 +121,10 @@ pub fn extract_tilemaps(
                 // Determine tile size in pixels from first sprite in TextureAtlas.
                 // It is assumed and mandated that all sprites in the sprite sheet are the same size.
                 let tile0_tex = texture_atlas.textures.first().unwrap();
-                let tile_size = Vec2::new(tile0_tex.width(), tile0_tex.height());
+                let tile_size = uvec2(tile0_tex.width(), tile0_tex.height());
 
-                let chunk_pixel_size = Vec2::new(CHUNK_WIDTH as f32, CHUNK_HEIGHT as f32) * tile_size;
-                let chunk_pixel_size = chunk_pixel_size * scale.truncate();
+                let chunk_pixel_size = uvec2(CHUNK_WIDTH, CHUNK_HEIGHT) * tile_size;
+                let chunk_pixel_size = chunk_pixel_size * scale.truncate().as_uvec2();
 
                 let chunk_iter = tilemap.chunks.iter();
 
@@ -131,13 +132,13 @@ pub fn extract_tilemaps(
                 let chunks: Vec<_> = chunk_iter
                     .filter_map(|(_, chunk)| {
                         let chunk_translation =
-                            (chunk.origin.truncate().as_vec2() * tile_size).extend(chunk.origin.z as f32);
+                            (chunk.origin.truncate().as_vec2() * tile_size.as_vec2()).extend(chunk.origin.z as f32);
                         let chunk_translation = transform.mul(chunk_translation);
 
                         let chunk_rect = Rect {
                             anchor: Anchor::BottomLeft,
                             position: chunk_translation.truncate(),
-                            size: chunk_pixel_size,
+                            size: chunk_pixel_size.as_vec2(),
                         };
 
                         if camera_rects.iter().all(|cr| !cr.is_intersecting(&chunk_rect)) {
@@ -173,7 +174,7 @@ pub fn extract_tilemaps(
                                     Some(ExtractedTile {
                                         pos: chunk.origin.truncate() + row_major_pos(i),
                                         rect,
-                                        color: tile.color,
+                                        color: tile.color.into(),
                                         flags: tile.flags,
                                     })
                                 } else {
@@ -185,7 +186,6 @@ pub fn extract_tilemaps(
                         Some(ExtractedChunk {
                             origin: chunk.origin,
                             tiles,
-                            last_change_at: chunk.last_change_at,
                         })
                     })
                     .collect();
@@ -195,7 +195,6 @@ pub fn extract_tilemaps(
                     transform: *transform,
                     image_handle_id: texture.id(),
                     tile_size,
-                    atlas_size: texture_atlas.size,
                     chunks,
                     visible_chunks,
                 });

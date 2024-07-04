@@ -48,6 +48,9 @@ pub struct TileMapCache {
     tile_changes_by_chunk: HashMap<IVec3, Vec<(IVec3, Option<Tile>)>>,
 }
 
+/// Alias for use with [`bevy_render::view::VisibleEntities`].
+pub type WithTileMap = With<TileMap>;
+
 impl Chunk {
     pub fn new(origin: IVec3) -> Self {
         Self {
@@ -104,7 +107,7 @@ impl TileMap {
     }
 
     pub fn set_tiles(&mut self, tiles: impl IntoIterator<Item = (IVec3, Option<Tile>)>) {
-        self.tile_changes.extend(tiles.into_iter());
+        self.tile_changes.extend(tiles);
     }
 }
 

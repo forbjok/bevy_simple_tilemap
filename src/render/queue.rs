@@ -3,18 +3,19 @@ use std::cmp::Ordering;
 use bevy::asset::AssetEvent;
 use bevy::core_pipeline::core_2d::Transparent2d;
 use bevy::ecs::prelude::*;
-use bevy::math::Vec2;
+use bevy::math::{FloatOrd, Vec2};
 use bevy::prelude::*;
+use bevy::render::render_phase::{PhaseItemExtraIndex, ViewSortedRenderPhases};
+use bevy::render::texture::GpuImage;
+use bevy::render::view::ExtractedView;
 use bevy::render::{
     render_asset::RenderAssets,
-    render_phase::{DrawFunctions, RenderPhase},
+    render_phase::DrawFunctions,
     render_resource::*,
     renderer::{RenderDevice, RenderQueue},
     texture::Image,
     view::ViewUniforms,
 };
-
-use bevy::utils::FloatOrd;
 
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -53,10 +54,11 @@ pub fn queue_tilemaps(
     mut pipelines: ResMut<SpecializedRenderPipelines<TilemapPipeline>>,
     pipeline_cache: Res<PipelineCache>,
     mut image_bind_groups: ResMut<ImageBindGroups>,
-    gpu_images: Res<RenderAssets<Image>>,
+    gpu_images: Res<RenderAssets<GpuImage>>,
     msaa: Res<Msaa>,
     mut extracted_tilemaps: ResMut<ExtractedTilemaps>,
-    mut views: Query<&mut RenderPhase<Transparent2d>>,
+    mut transparent_render_phases: ResMut<ViewSortedRenderPhases<Transparent2d>>,
+    views: Query<Entity, With<ExtractedView>>,
     events: Res<TilemapAssetEvents>,
 ) {
     // If an image has changed, the GpuImage has (probably) changed
@@ -85,7 +87,11 @@ pub fn queue_tilemaps(
         let key = TilemapPipelineKey::from_msaa_samples(msaa.samples());
         let pipeline = pipelines.specialize(&pipeline_cache, &tilemap_pipeline, key);
 
-        for mut transparent_phase in views.iter_mut() {
+        for view_entity in views.iter() {
+            let Some(transparent_phase) = transparent_render_phases.get_mut(&view_entity) else {
+                continue;
+            };
+
             let tilemaps = &mut extracted_tilemaps.tilemaps;
             let image_bind_groups = &mut *image_bind_groups;
 
@@ -108,16 +114,7 @@ pub fn queue_tilemaps(
                             render_device.create_bind_group(
                                 Some("tilemap_material_bind_group"),
                                 &tilemap_pipeline.material_layout,
-                                &[
-                                    BindGroupEntry {
-                                        binding: 0,
-                                        resource: BindingResource::TextureView(&gpu_image.texture_view),
-                                    },
-                                    BindGroupEntry {
-                                        binding: 1,
-                                        resource: BindingResource::Sampler(&gpu_image.sampler),
-                                    },
-                                ],
+                                &BindGroupEntries::sequential((&gpu_image.texture_view, &gpu_image.sampler)),
                             )
                         });
                 } else {
@@ -157,6 +154,8 @@ pub fn queue_tilemaps(
                         chunk_meta.texture_size = image_size;
                         chunk_meta.vertices.clear();
 
+                        let image_size = image_size.as_vec2();
+
                         let z = chunk.origin.z as f32;
 
                         for tile in chunk.tiles.iter() {
@@ -175,7 +174,7 @@ pub fn queue_tilemaps(
                             let tile_uvs = uvs;
 
                             // If a rect is specified, adjust UVs and the size of the quad
-                            let rect = tile.rect;
+                            let rect = tile.rect.as_rect();
                             let quad_size = rect.size();
                             for uv in &mut uvs {
                                 *uv = (rect.min + *uv * quad_size) / image_size;
@@ -188,12 +187,7 @@ pub fn queue_tilemaps(
                                 .map(|quad_pos| (tile_pos + (quad_pos * quad_size)).extend(z).into());
 
                             // Store the vertex data and add the item to the render phase
-                            let color = tile.color.as_linear_rgba_f32();
-                            // encode color as a single u32 to save space
-                            let color = (color[0] * 255.0) as u32
-                                | ((color[1] * 255.0) as u32) << 8
-                                | ((color[2] * 255.0) as u32) << 16
-                                | ((color[3] * 255.0) as u32) << 24;
+                            let color = tile.color.to_f32_array();
 
                             for i in QUAD_INDICES.iter() {
                                 chunk_meta.vertices.push(TilemapVertex {
@@ -251,8 +245,8 @@ pub fn queue_tilemaps(
                 chunk_meta.tilemap_gpu_data.clear();
                 chunk_meta.tilemap_gpu_data.push(&TilemapGpuData {
                     transform: tilemap_transform.compute_matrix(),
-                    tile_size: chunk_meta.tile_size,
-                    texture_size: chunk_meta.texture_size,
+                    tile_size: chunk_meta.tile_size.as_vec2(),
+                    texture_size: chunk_meta.texture_size.as_vec2(),
                 });
 
                 chunk_meta.tilemap_gpu_data.write_buffer(&render_device, &render_queue);
@@ -288,7 +282,7 @@ pub fn queue_tilemaps(
                     entity: batch_entity,
                     sort_key,
                     batch_range: 0..1,
-                    dynamic_offset: None,
+                    extra_index: PhaseItemExtraIndex::NONE,
                 });
             }
         }

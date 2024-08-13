@@ -29,7 +29,7 @@ features = [
 git = "https://github.com/bevyengine/bevy.git"
 branch = "main"
 default-features = false
-features = ["x11", "png"]
+features = ["x11", "png", "wayland"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rayon = "1.10.0"

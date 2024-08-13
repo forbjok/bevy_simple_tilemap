@@ -55,10 +55,9 @@ pub fn queue_tilemaps(
     pipeline_cache: Res<PipelineCache>,
     mut image_bind_groups: ResMut<ImageBindGroups>,
     gpu_images: Res<RenderAssets<GpuImage>>,
-    msaa: Res<Msaa>,
     mut extracted_tilemaps: ResMut<ExtractedTilemaps>,
     mut transparent_render_phases: ResMut<ViewSortedRenderPhases<Transparent2d>>,
-    views: Query<Entity, With<ExtractedView>>,
+    views: Query<(Entity, &Msaa), With<ExtractedView>>,
     events: Res<TilemapAssetEvents>,
 ) {
     // If an image has changed, the GpuImage has (probably) changed
@@ -84,13 +83,14 @@ pub fn queue_tilemaps(
         ));
 
         let draw_tilemap_function = draw_functions.read().get_id::<DrawTilemap>().unwrap();
-        let key = TilemapPipelineKey::from_msaa_samples(msaa.samples());
-        let pipeline = pipelines.specialize(&pipeline_cache, &tilemap_pipeline, key);
 
-        for view_entity in views.iter() {
+        for (view_entity, msaa) in views.iter() {
             let Some(transparent_phase) = transparent_render_phases.get_mut(&view_entity) else {
                 continue;
             };
+
+            let key = TilemapPipelineKey::from_msaa_samples(msaa.samples());
+            let pipeline = pipelines.specialize(&pipeline_cache, &tilemap_pipeline, key);
 
             let tilemaps = &mut extracted_tilemaps.tilemaps;
             let image_bind_groups = &mut *image_bind_groups;

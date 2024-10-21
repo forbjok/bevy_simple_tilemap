@@ -1,8 +1,7 @@
 use bitflags::bitflags;
 
 use bevy::{
-    prelude::*,
-    utils::{HashMap, HashSet, Instant},
+    prelude::*, render::sync_world::SyncToRenderWorld, utils::{HashMap, HashSet, Instant}
 };
 
 pub(crate) const CHUNK_WIDTH: u32 = 64;
@@ -35,12 +34,18 @@ pub struct Tile {
     pub flags: TileFlags,
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Debug, Default)]
+#[require(TileMapCache, Transform, Visibility, SyncToRenderWorld)]
 pub struct TileMap {
+    pub image: Handle<Image>,
+    pub texture_atlas: TextureAtlas,
+
     pub chunks: HashMap<IVec3, Chunk>,
-    tile_changes: Vec<(IVec3, Option<Tile>)>,
-    clear_all: bool,
-    clear_layers: HashSet<i32>,
+
+    // Private
+    pub tile_changes: Vec<(IVec3, Option<Tile>)>,
+    pub clear_all: bool,
+    pub clear_layers: HashSet<i32>,
 }
 
 #[derive(Component, Default)]

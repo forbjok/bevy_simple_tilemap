@@ -4,7 +4,10 @@ use bevy::{
     color::LinearRgba,
     math::{IVec2, IVec3, Mat4, URect, UVec2, Vec2},
     prelude::{AssetEvent, AssetId, Component, Entity, GlobalTransform, Handle, Image, Resource, Shader},
-    render::render_resource::{BindGroup, BufferUsages, DynamicUniformBuffer, RawBufferVec, ShaderType},
+    render::{
+        render_resource::{BindGroup, BufferUsages, DynamicUniformBuffer, RawBufferVec, ShaderType},
+        sync_world::MainEntity,
+    },
     utils::HashMap,
 };
 use bytemuck::{Pod, Zeroable};
@@ -31,7 +34,6 @@ pub struct ExtractedChunk {
 }
 
 pub struct ExtractedTilemap {
-    pub entity: Entity,
     pub transform: GlobalTransform,
     pub image_handle_id: AssetId<Image>,
     pub tile_size: UVec2,
@@ -41,7 +43,7 @@ pub struct ExtractedTilemap {
 
 #[derive(Default, Resource)]
 pub struct ExtractedTilemaps {
-    pub tilemaps: Vec<ExtractedTilemap>,
+    pub tilemaps: HashMap<(Entity, MainEntity), ExtractedTilemap>,
 }
 
 #[derive(Default, Resource)]

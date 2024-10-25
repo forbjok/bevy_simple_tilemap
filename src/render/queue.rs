@@ -17,6 +17,7 @@ use bevy::render::{
     view::ViewUniforms,
 };
 
+use bevy::utils::hashbrown::HashMap;
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
@@ -55,10 +56,9 @@ pub fn queue_tilemaps(
     pipeline_cache: Res<PipelineCache>,
     mut image_bind_groups: ResMut<ImageBindGroups>,
     gpu_images: Res<RenderAssets<GpuImage>>,
-    msaa: Res<Msaa>,
     mut extracted_tilemaps: ResMut<ExtractedTilemaps>,
     mut transparent_render_phases: ResMut<ViewSortedRenderPhases<Transparent2d>>,
-    views: Query<Entity, With<ExtractedView>>,
+    views: Query<(Entity, &Msaa), With<ExtractedView>>,
     events: Res<TilemapAssetEvents>,
 ) {
     // If an image has changed, the GpuImage has (probably) changed
@@ -84,13 +84,14 @@ pub fn queue_tilemaps(
         ));
 
         let draw_tilemap_function = draw_functions.read().get_id::<DrawTilemap>().unwrap();
-        let key = TilemapPipelineKey::from_msaa_samples(msaa.samples());
-        let pipeline = pipelines.specialize(&pipeline_cache, &tilemap_pipeline, key);
 
-        for view_entity in views.iter() {
+        for (view_entity, msaa) in views.iter() {
             let Some(transparent_phase) = transparent_render_phases.get_mut(&view_entity) else {
                 continue;
             };
+
+            let key = TilemapPipelineKey::from_msaa_samples(msaa.samples());
+            let pipeline = pipelines.specialize(&pipeline_cache, &tilemap_pipeline, key);
 
             let tilemaps = &mut extracted_tilemaps.tilemaps;
             let image_bind_groups = &mut *image_bind_groups;
@@ -100,8 +101,9 @@ pub fn queue_tilemaps(
             let mut visible_chunks: Vec<(Entity, IVec3)> = Vec::new();
             let mut tilemap_transforms: HashMap<Entity, GlobalTransform> = HashMap::default();
             let mut tilemap_image_handle_ids: HashMap<Entity, AssetId<Image>> = HashMap::default();
+            let mut tilemap_main_entities: HashMap<Entity, MainEntity> = HashMap::default();
 
-            for tilemap in tilemaps.iter_mut() {
+            for ((entity, main_entity), tilemap) in tilemaps.iter_mut() {
                 let image_size;
                 // Set-up a new possible batch
                 if let Some(gpu_image) = gpu_images.get(tilemap.image_handle_id) {
@@ -130,7 +132,7 @@ pub fn queue_tilemaps(
                     .chunks
                     .drain(..)
                     .map(|c| {
-                        let entry = tilemap_meta.chunks.remove_entry(&(tilemap.entity, c.origin));
+                        let entry = tilemap_meta.chunks.remove_entry(&(*entity, c.origin));
 
                         (c, entry)
                     })
@@ -147,7 +149,7 @@ pub fn queue_tilemaps(
                         let (key, mut chunk_meta) = if let Some((key, chunk_meta)) = chunk_meta {
                             (key, chunk_meta)
                         } else {
-                            ((tilemap.entity, chunk.origin), ChunkMeta::default())
+                            ((*entity, chunk.origin), ChunkMeta::default())
                         };
 
                         chunk_meta.tile_size = tilemap.tile_size;
@@ -208,9 +210,10 @@ pub fn queue_tilemaps(
                     tilemap_meta.chunks.insert(key, chunk_meta);
                 }
 
-                visible_chunks.extend(tilemap.visible_chunks.drain(..).map(|pos| (tilemap.entity, pos)));
-                tilemap_transforms.insert(tilemap.entity, tilemap.transform);
-                tilemap_image_handle_ids.insert(tilemap.entity, tilemap.image_handle_id);
+                visible_chunks.extend(tilemap.visible_chunks.drain(..).map(|pos| (*entity, pos)));
+                tilemap_transforms.insert(*entity, tilemap.transform);
+                tilemap_image_handle_ids.insert(*entity, tilemap.image_handle_id);
+                tilemap_main_entities.insert(*entity, *main_entity);
             }
 
             let mut sorted_chunks: Vec<_> = tilemap_meta
@@ -274,12 +277,14 @@ pub fn queue_tilemaps(
                     range: 0..vertex_count,
                 };
 
-                let batch_entity = commands.spawn((batch,)).id();
+                let batch_entity = commands.spawn(batch).id();
+
+                let main_entity = tilemap_main_entities.get(tilemap_entity).unwrap();
 
                 transparent_phase.add(Transparent2d {
                     draw_function: draw_tilemap_function,
                     pipeline,
-                    entity: batch_entity,
+                    entity: (batch_entity, *main_entity),
                     sort_key,
                     batch_range: 0..1,
                     extra_index: PhaseItemExtraIndex::NONE,

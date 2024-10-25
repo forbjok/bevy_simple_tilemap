@@ -4,9 +4,9 @@ use bevy::asset::{AssetEvent, Assets};
 use bevy::ecs::prelude::*;
 use bevy::math::uvec2;
 use bevy::prelude::*;
+use bevy::render::sync_world::RenderEntity;
 use bevy::render::texture::Image;
 use bevy::render::Extract;
-use bevy::sprite::TextureAtlas;
 use bevy::transform::components::GlobalTransform;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -34,16 +34,7 @@ pub fn extract_tilemaps(
     mut extracted_tilemaps: ResMut<ExtractedTilemaps>,
     images: Extract<Res<Assets<Image>>>,
     texture_atlases: Extract<Res<Assets<TextureAtlasLayout>>>,
-    tilemap_query: Extract<
-        Query<(
-            Entity,
-            &ViewVisibility,
-            &TileMap,
-            &GlobalTransform,
-            &Handle<Image>,
-            &TextureAtlas,
-        )>,
-    >,
+    tilemap_query: Extract<Query<(Entity, RenderEntity, &ViewVisibility, &TileMap, &GlobalTransform)>>,
     window_query: Extract<Query<&Window>>,
     camera_transform_query: Extract<Query<&GlobalTransform, With<Camera2d>>>,
 ) {
@@ -109,13 +100,13 @@ pub fn extract_tilemaps(
 
     extracted_tilemaps.tilemaps.clear();
 
-    for (entity, view_visibility, tilemap, transform, texture, atlas) in tilemap_query.iter() {
+    for (original_entity, entity, view_visibility, tilemap, transform) in tilemap_query.iter() {
         if !view_visibility.get() {
             continue;
         }
 
-        if let Some(texture_atlas) = texture_atlases.get(&atlas.layout) {
-            if images.contains(texture) {
+        if let Some(texture_atlas) = texture_atlases.get(&tilemap.texture_atlas_layout) {
+            if images.contains(&tilemap.image) {
                 let (scale, _, _) = transform.to_scale_rotation_translation();
 
                 // Determine tile size in pixels from first sprite in TextureAtlas.
@@ -190,14 +181,16 @@ pub fn extract_tilemaps(
                     })
                     .collect();
 
-                extracted_tilemaps.tilemaps.push(ExtractedTilemap {
-                    entity,
-                    transform: *transform,
-                    image_handle_id: texture.id(),
-                    tile_size,
-                    chunks,
-                    visible_chunks,
-                });
+                extracted_tilemaps.tilemaps.insert(
+                    (entity, original_entity.into()),
+                    ExtractedTilemap {
+                        transform: *transform,
+                        image_handle_id: tilemap.image.id(),
+                        tile_size,
+                        chunks,
+                        visible_chunks,
+                    },
+                );
             }
         }
     }

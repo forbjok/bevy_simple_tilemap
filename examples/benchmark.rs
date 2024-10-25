@@ -34,21 +34,21 @@ fn input_system(
 
     if let Some(mut tf) = camera_transform_query.iter_mut().next() {
         if keyboard_input.pressed(KeyCode::KeyX) {
-            tf.scale -= Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
+            tf.scale -= Vec3::splat(ZOOM_SPEED) * time.delta_secs();
         } else if keyboard_input.pressed(KeyCode::KeyZ) {
-            tf.scale += Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
+            tf.scale += Vec3::splat(ZOOM_SPEED) * time.delta_secs();
         }
 
         if keyboard_input.pressed(KeyCode::KeyA) {
-            tf.translation.x -= MOVE_SPEED * time.delta_seconds();
+            tf.translation.x -= MOVE_SPEED * time.delta_secs();
         } else if keyboard_input.pressed(KeyCode::KeyD) {
-            tf.translation.x += MOVE_SPEED * time.delta_seconds();
+            tf.translation.x += MOVE_SPEED * time.delta_secs();
         }
 
         if keyboard_input.pressed(KeyCode::KeyS) {
-            tf.translation.y -= MOVE_SPEED * time.delta_seconds();
+            tf.translation.y -= MOVE_SPEED * time.delta_secs();
         } else if keyboard_input.pressed(KeyCode::KeyW) {
-            tf.translation.y += MOVE_SPEED * time.delta_seconds();
+            tf.translation.y += MOVE_SPEED * time.delta_secs();
         }
 
         if keyboard_input.just_pressed(KeyCode::KeyV) {
@@ -107,28 +107,20 @@ fn setup(
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     // Load tilesheet texture and make a texture atlas from it
-    let texture = asset_server.load("textures/tilesheet.png");
+    let image = asset_server.load("textures/tilesheet.png");
     let atlas = TextureAtlasLayout::from_grid(uvec2(16, 16), 4, 1, Some(uvec2(1, 1)), None);
-    let texture_atlas = texture_atlases.add(atlas);
+    let atlas_handle = texture_atlases.add(atlas);
 
-    // Set up tilemap
-    let tilemap_bundle = TileMapBundle {
-        texture,
-        atlas: TextureAtlas {
-            layout: texture_atlas,
-            ..Default::default()
-        },
-        transform: Transform {
+    // Spawn camera
+    commands.spawn(Camera2d::default());
+
+    // Spawn tilemap
+    commands.spawn((
+        TileMap::new(image, atlas_handle),
+        Transform {
             scale: Vec3::splat(1.0),
             translation: Vec3::new(-640.0, -360.0, 0.0),
             ..Default::default()
         },
-        ..Default::default()
-    };
-
-    // Spawn camera
-    commands.spawn(Camera2dBundle::default());
-
-    // Spawn tilemap
-    commands.spawn(tilemap_bundle);
+    ));
 }

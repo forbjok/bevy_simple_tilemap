@@ -1,9 +1,10 @@
 use bevy::core_pipeline::core_2d::CORE_2D_DEPTH_FORMAT;
 use bevy::ecs::prelude::*;
 use bevy::ecs::system::SystemState;
+use bevy::image::BevyDefault;
 use bevy::render::render_resource::binding_types::{sampler, texture_2d, uniform_buffer};
 use bevy::render::view::ViewUniform;
-use bevy::render::{render_resource::*, renderer::RenderDevice, texture::BevyDefault};
+use bevy::render::{render_resource::*, renderer::RenderDevice};
 
 use super::*;
 
@@ -151,6 +152,7 @@ impl SpecializedRenderPipeline for TilemapPipeline {
             },
             label: Some("tilemap_pipeline".into()),
             push_constant_ranges: Vec::new(),
+            zero_initialize_workgroup_memory: false,
         }
     }
 }

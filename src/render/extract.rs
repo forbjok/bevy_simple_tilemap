@@ -2,10 +2,10 @@ use std::ops::Mul;
 
 use bevy::asset::{AssetEvent, Assets};
 use bevy::ecs::prelude::*;
+use bevy::image::Image;
 use bevy::math::uvec2;
 use bevy::prelude::*;
 use bevy::render::sync_world::RenderEntity;
-use bevy::render::texture::Image;
 use bevy::render::Extract;
 use bevy::transform::components::GlobalTransform;
 

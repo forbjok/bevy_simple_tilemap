@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use bevy::asset::AssetEvent;
 use bevy::core_pipeline::core_2d::Transparent2d;
 use bevy::ecs::prelude::*;
+use bevy::image::Image;
 use bevy::math::{FloatOrd, Vec2};
 use bevy::prelude::*;
 use bevy::render::render_phase::{PhaseItemExtraIndex, ViewSortedRenderPhases};
@@ -13,7 +14,6 @@ use bevy::render::{
     render_phase::DrawFunctions,
     render_resource::*,
     renderer::{RenderDevice, RenderQueue},
-    texture::Image,
     view::ViewUniforms,
 };
 

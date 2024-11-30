@@ -23,6 +23,7 @@ features = [
   "bevy_render",
   "bevy_sprite",
   "bevy_window",
+  "png",
 ]
 
 [dev-dependencies.bevy]

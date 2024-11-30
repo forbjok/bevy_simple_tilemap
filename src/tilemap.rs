@@ -2,6 +2,7 @@ use bitflags::bitflags;
 
 use bevy::{
     prelude::*,
+    render::sync_world::SyncToRenderWorld,
     utils::{HashMap, HashSet, Instant},
 };
 
@@ -35,9 +36,14 @@ pub struct Tile {
     pub flags: TileFlags,
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Debug)]
+#[require(TileMapCache, Transform, Visibility, SyncToRenderWorld)]
 pub struct TileMap {
+    pub image: Handle<Image>,
+    pub texture_atlas_layout: Handle<TextureAtlasLayout>,
+
     pub chunks: HashMap<IVec3, Chunk>,
+
     tile_changes: Vec<(IVec3, Option<Tile>)>,
     clear_all: bool,
     clear_layers: HashSet<i32>,
@@ -83,6 +89,18 @@ impl Chunk {
 }
 
 impl TileMap {
+    pub fn new(image: Handle<Image>, texture_atlas_layout: Handle<TextureAtlasLayout>) -> Self {
+        Self {
+            image,
+            texture_atlas_layout,
+
+            chunks: Default::default(),
+            tile_changes: Default::default(),
+            clear_all: false,
+            clear_layers: Default::default(),
+        }
+    }
+
     pub fn clear(&mut self) {
         // Clear change queue
         self.tile_changes.clear();

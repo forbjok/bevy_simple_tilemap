@@ -38,21 +38,21 @@ fn input_system(
 
     if let Some(mut tf) = camera_transform_query.iter_mut().next() {
         if keyboard_input.pressed(KeyCode::KeyX) {
-            tf.scale -= Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
+            tf.scale -= Vec3::splat(ZOOM_SPEED) * time.delta_secs();
         } else if keyboard_input.pressed(KeyCode::KeyZ) {
-            tf.scale += Vec3::splat(ZOOM_SPEED) * time.delta_seconds();
+            tf.scale += Vec3::splat(ZOOM_SPEED) * time.delta_secs();
         }
 
         if keyboard_input.pressed(KeyCode::KeyA) {
-            tf.translation.x -= MOVE_SPEED * time.delta_seconds();
+            tf.translation.x -= MOVE_SPEED * time.delta_secs();
         } else if keyboard_input.pressed(KeyCode::KeyD) {
-            tf.translation.x += MOVE_SPEED * time.delta_seconds();
+            tf.translation.x += MOVE_SPEED * time.delta_secs();
         }
 
         if keyboard_input.pressed(KeyCode::KeyS) {
-            tf.translation.y -= MOVE_SPEED * time.delta_seconds();
+            tf.translation.y -= MOVE_SPEED * time.delta_secs();
         } else if keyboard_input.pressed(KeyCode::KeyW) {
-            tf.translation.y += MOVE_SPEED * time.delta_seconds();
+            tf.translation.y += MOVE_SPEED * time.delta_secs();
         }
 
         if keyboard_input.just_pressed(KeyCode::KeyV) {
@@ -178,9 +178,9 @@ fn setup(
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     // Load tilesheet texture and make a texture atlas from it
-    let texture = asset_server.load("textures/tilesheet.png");
+    let image = asset_server.load("textures/tilesheet.png");
     let atlas = TextureAtlasLayout::from_grid(uvec2(16, 16), 4, 1, Some(uvec2(1, 1)), None);
-    let texture_atlas = texture_atlases.add(atlas);
+    let atlas_handle = texture_atlases.add(atlas);
 
     let mut tiles = Vec::new();
 
@@ -198,57 +198,49 @@ fn setup(
     }
 
     // Set up tilemap
-    let tilemap_bundle1 = {
-        let mut tilemap = TileMap::default();
+    let tilemap1 = {
+        let mut tilemap = TileMap::new(image.clone(), atlas_handle.clone());
+
         tilemap.set_tiles(tiles.clone());
 
-        TileMapBundle {
+        (
             tilemap,
-            texture: texture.clone(),
-            atlas: TextureAtlas {
-                layout: texture_atlas.clone(),
-                ..Default::default()
-            },
-            transform: Transform {
+            Transform {
                 scale: Vec3::splat(3.0),
                 translation: Vec3::new(-500.0, -(16.0 * 3.0 * 10.0 / 2.0), 0.0),
                 ..Default::default()
             },
-            ..Default::default()
-        }
+            TileMap1 {
+                pos: ivec2(0, 0),
+                sprite_index: 0,
+            },
+        )
     };
 
-    let tilemap_bundle2 = {
-        let mut tilemap = TileMap::default();
+    let tilemap2 = {
+        let mut tilemap = TileMap::new(image, atlas_handle);
+
         tilemap.set_tiles(tiles);
 
-        TileMapBundle {
+        (
             tilemap,
-            texture,
-            atlas: TextureAtlas {
-                layout: texture_atlas,
-                ..Default::default()
-            },
-            transform: Transform {
+            Transform {
                 scale: Vec3::splat(3.0),
                 translation: Vec3::new(60.0, -(16.0 * 3.0 * 10.0 / 2.0), 0.0),
                 ..Default::default()
             },
-            ..Default::default()
-        }
+            TileMap2 {
+                pos: ivec2(0, 0),
+                direction: 0,
+                level: 0,
+            },
+        )
     };
 
     // Spawn camera
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d::default());
 
     // Spawn tilemaps
-    commands.spawn(tilemap_bundle1).insert(TileMap1 {
-        pos: ivec2(0, 0),
-        sprite_index: 0,
-    });
-    commands.spawn(tilemap_bundle2).insert(TileMap2 {
-        pos: ivec2(0, 0),
-        direction: 0,
-        level: 0,
-    });
+    commands.spawn(tilemap1);
+    commands.spawn(tilemap2);
 }

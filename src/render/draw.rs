@@ -51,7 +51,7 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetTilemapTextureBindGro
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         let Some(entity) = entity else {
-            return RenderCommandResult::Failure;
+            return RenderCommandResult::Skip;
         };
 
         let tilemap_batch = query_batch.get(entity).unwrap();
@@ -81,7 +81,7 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetTilemapTileGpuDataBin
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         let Some(entity) = entity else {
-            return RenderCommandResult::Failure;
+            return RenderCommandResult::Skip;
         };
 
         let tilemap_batch = query_batch.get(entity).unwrap();
@@ -107,7 +107,7 @@ impl<P: PhaseItem> RenderCommand<P> for SetVertexBuffer {
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         let Some(entity) = entity else {
-            return RenderCommandResult::Failure;
+            return RenderCommandResult::Skip;
         };
 
         let tilemap_batch = query_batch.get(entity).unwrap();
@@ -135,7 +135,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawTilemapBatch {
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         let Some(batch) = batch else {
-            return RenderCommandResult::Failure;
+            return RenderCommandResult::Skip;
         };
 
         pass.draw(batch.range.clone(), 0..1);

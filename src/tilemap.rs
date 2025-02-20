@@ -1,9 +1,14 @@
+use std::time::Instant;
+
 use bitflags::bitflags;
 
 use bevy::{
+    platform_support::collections::{HashMap, HashSet},
     prelude::*,
-    render::sync_world::SyncToRenderWorld,
-    utils::{HashMap, HashSet, Instant},
+    render::{
+        sync_world::SyncToRenderWorld,
+        view::{self, VisibilityClass},
+    },
 };
 
 pub(crate) const CHUNK_WIDTH: u32 = 64;
@@ -37,7 +42,8 @@ pub struct Tile {
 }
 
 #[derive(Component, Debug)]
-#[require(TileMapCache, Transform, Visibility, SyncToRenderWorld)]
+#[require(TileMapCache, Transform, Visibility, SyncToRenderWorld, VisibilityClass)]
+#[component(on_add = view::add_visibility_class::<Sprite>)]
 pub struct TileMap {
     pub image: Handle<Image>,
     pub texture_atlas_layout: Handle<TextureAtlasLayout>,
@@ -53,9 +59,6 @@ pub struct TileMap {
 pub struct TileMapCache {
     tile_changes_by_chunk: HashMap<IVec3, Vec<(IVec3, Option<Tile>)>>,
 }
-
-/// Alias for use with [`bevy_render::view::VisibleEntities`].
-pub type WithTileMap = With<TileMap>;
 
 impl Chunk {
     pub fn new(origin: IVec3) -> Self {

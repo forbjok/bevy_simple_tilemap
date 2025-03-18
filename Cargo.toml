@@ -25,6 +25,7 @@ features = [
   "bevy_sprite",
   "bevy_window",
   "png",
+  "std",
 ]
 
 [dev-dependencies.bevy]

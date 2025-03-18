@@ -288,6 +288,7 @@ pub fn queue_tilemaps(
                     entity: (batch_entity, *main_entity),
                     sort_key,
                     batch_range: 0..1,
+                    extracted_index: usize::MAX,
                     extra_index: PhaseItemExtraIndex::None,
                     indexed: false,
                 });

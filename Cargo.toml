@@ -2,7 +2,7 @@
 name = "bevy_simple_tilemap"
 version = "0.16.0"
 authors = ["Forb.Jok <forbjok@gmail.com>"]
-edition = "2021"
+edition = "2024"
 description = "Refreshingly simple tilemap implementation for Bevy Engine."
 license = "MIT/Apache-2.0"
 repository = "https://github.com/forbjok/bevy_simple_tilemap.git"

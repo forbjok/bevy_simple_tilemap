@@ -212,24 +212,27 @@ pub(crate) fn update_chunks_system(mut tilemap_query: Query<(&mut TileMap, &mut 
                 continue;
             }
 
-            match tilemap.chunks.get_mut(chunk_pos) { Some(chunk) => {
-                // Chunk already exists...
+            match tilemap.chunks.get_mut(chunk_pos) {
+                Some(chunk) => {
+                    // Chunk already exists...
 
-                // Set tiles in chunk
-                chunk.set_tiles(tiles.drain(..));
-            } _ => {
-                // Chunk does not exist yet, and needs to be spawned...
+                    // Set tiles in chunk
+                    chunk.set_tiles(tiles.drain(..));
+                }
+                _ => {
+                    // Chunk does not exist yet, and needs to be spawned...
 
-                let chunk_origin = calc_chunk_origin(*chunk_pos);
+                    let chunk_origin = calc_chunk_origin(*chunk_pos);
 
-                let mut chunk = Chunk::new(chunk_origin);
+                    let mut chunk = Chunk::new(chunk_origin);
 
-                // Set tiles in chunk
-                chunk.set_tiles(tiles.drain(..));
+                    // Set tiles in chunk
+                    chunk.set_tiles(tiles.drain(..));
 
-                // Store chunk entity in the tilemap
-                tilemap.chunks.insert(*chunk_pos, chunk);
-            }}
+                    // Store chunk entity in the tilemap
+                    tilemap.chunks.insert(*chunk_pos, chunk);
+                }
+            }
         }
     }
 }

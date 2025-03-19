@@ -3,15 +3,15 @@ use bevy::{
     core_pipeline::core_2d::Transparent2d,
     prelude::*,
     render::{
+        Render, RenderApp, RenderSet,
         render_phase::AddRenderCommand,
         render_resource::{Shader, SpecializedRenderPipelines},
-        Render, RenderApp, RenderSet,
     },
 };
 
 use crate::render::{
-    self, draw::DrawTilemap, pipeline::TilemapPipeline, ExtractedTilemaps, ImageBindGroups, TilemapAssetEvents,
-    TilemapMeta, TILEMAP_SHADER_HANDLE,
+    self, ExtractedTilemaps, ImageBindGroups, TILEMAP_SHADER_HANDLE, TilemapAssetEvents, TilemapMeta,
+    draw::DrawTilemap, pipeline::TilemapPipeline,
 };
 
 #[derive(Default)]

@@ -5,15 +5,15 @@ use bevy::ecs::prelude::*;
 use bevy::image::Image;
 use bevy::math::uvec2;
 use bevy::prelude::*;
-use bevy::render::sync_world::RenderEntity;
 use bevy::render::Extract;
+use bevy::render::sync_world::RenderEntity;
 use bevy::transform::components::GlobalTransform;
 
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::tilemap::{row_major_pos, CHUNK_HEIGHT, CHUNK_WIDTH};
 use crate::TileMap;
+use crate::tilemap::{CHUNK_HEIGHT, CHUNK_WIDTH, row_major_pos};
 
 use super::*;
 

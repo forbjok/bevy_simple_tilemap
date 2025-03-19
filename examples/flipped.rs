@@ -4,7 +4,7 @@ use bevy::{
     window::WindowResolution,
 };
 
-use bevy_simple_tilemap::{prelude::*, TileFlags};
+use bevy_simple_tilemap::{TileFlags, prelude::*};
 
 fn main() {
     App::new()

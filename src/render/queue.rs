@@ -145,11 +145,10 @@ pub fn queue_tilemaps(
                 // Process extracted chunks in parallel, updating their metadata.
                 let results: Vec<(ChunkKey, ChunkMeta)> = chonk_iter
                     .map(|(chunk, chunk_meta)| {
-                        let (key, mut chunk_meta) = match chunk_meta { Some((key, chunk_meta)) => {
-                            (key, chunk_meta)
-                        } _ => {
-                            ((*entity, chunk.origin), ChunkMeta::default())
-                        }};
+                        let (key, mut chunk_meta) = match chunk_meta {
+                            Some((key, chunk_meta)) => (key, chunk_meta),
+                            _ => ((*entity, chunk.origin), ChunkMeta::default()),
+                        };
 
                         let texture_size = uvec2(image_size.width, image_size.height);
 

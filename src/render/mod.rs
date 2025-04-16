@@ -4,7 +4,7 @@ use bevy::{
     asset::weak_handle,
     color::LinearRgba,
     math::{IVec2, IVec3, Mat4, URect, UVec2, Vec2},
-    platform_support::collections::HashMap,
+    platform::collections::HashMap,
     prelude::{AssetEvent, AssetId, Component, Entity, GlobalTransform, Handle, Image, Resource, Shader},
     render::{
         render_resource::{BindGroup, BufferUsages, DynamicUniformBuffer, RawBufferVec, ShaderType},

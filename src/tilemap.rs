@@ -3,7 +3,7 @@ use std::time::Instant;
 use bitflags::bitflags;
 
 use bevy::{
-    platform_support::collections::{HashMap, HashSet},
+    platform::collections::{HashMap, HashSet},
     prelude::*,
     render::{
         sync_world::SyncToRenderWorld,

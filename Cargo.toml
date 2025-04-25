@@ -2,7 +2,7 @@
 name = "bevy_simple_tilemap"
 version = "0.16.0"
 authors = ["Forb.Jok <forbjok@gmail.com>"]
-edition = "2021"
+edition = "2024"
 description = "Refreshingly simple tilemap implementation for Bevy Engine."
 license = "MIT/Apache-2.0"
 repository = "https://github.com/forbjok/bevy_simple_tilemap.git"
@@ -10,11 +10,11 @@ repository = "https://github.com/forbjok/bevy_simple_tilemap.git"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bitflags = "2.6.0"
-bytemuck = "1.20.0"
+bitflags = "2.9.0"
+bytemuck = "1.22.0"
 
 [dependencies.bevy]
-version = "0.15.0"
+version = "0.16.0"
 default-features = false
 features = [
   "bevy_asset",
@@ -23,11 +23,10 @@ features = [
   "bevy_render",
   "bevy_sprite",
   "bevy_window",
-  "png",
 ]
 
 [dev-dependencies.bevy]
-version = "0.15.0"
+version = "0.16.0"
 default-features = false
 features = ["x11", "png", "wayland"]
 

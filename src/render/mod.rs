@@ -1,14 +1,15 @@
 use std::ops::Range;
 
 use bevy::{
+    asset::weak_handle,
     color::LinearRgba,
     math::{IVec2, IVec3, Mat4, URect, UVec2, Vec2},
+    platform::collections::HashMap,
     prelude::{AssetEvent, AssetId, Component, Entity, GlobalTransform, Handle, Image, Resource, Shader},
     render::{
         render_resource::{BindGroup, BufferUsages, DynamicUniformBuffer, RawBufferVec, ShaderType},
         sync_world::MainEntity,
     },
-    utils::HashMap,
 };
 use bytemuck::{Pod, Zeroable};
 
@@ -19,7 +20,7 @@ pub mod extract;
 pub mod pipeline;
 pub mod queue;
 
-pub const TILEMAP_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(9765236402292098257);
+pub const TILEMAP_SHADER_HANDLE: Handle<Shader> = weak_handle!("3f7c8913-f14a-40cb-b044-4916400481e2");
 
 pub struct ExtractedTile {
     pub pos: IVec2,

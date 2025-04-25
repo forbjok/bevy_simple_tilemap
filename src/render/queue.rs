@@ -5,6 +5,7 @@ use bevy::core_pipeline::core_2d::Transparent2d;
 use bevy::ecs::prelude::*;
 use bevy::image::Image;
 use bevy::math::{FloatOrd, Vec2};
+use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::render::render_phase::{PhaseItemExtraIndex, ViewSortedRenderPhases};
 use bevy::render::texture::GpuImage;
@@ -17,7 +18,6 @@ use bevy::render::{
     view::ViewUniforms,
 };
 
-use bevy::utils::hashbrown::HashMap;
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
@@ -58,7 +58,7 @@ pub fn queue_tilemaps(
     gpu_images: Res<RenderAssets<GpuImage>>,
     mut extracted_tilemaps: ResMut<ExtractedTilemaps>,
     mut transparent_render_phases: ResMut<ViewSortedRenderPhases<Transparent2d>>,
-    views: Query<(Entity, &Msaa), With<ExtractedView>>,
+    views: Query<(&ExtractedView, &Msaa), With<ExtractedView>>,
     events: Res<TilemapAssetEvents>,
 ) {
     // If an image has changed, the GpuImage has (probably) changed
@@ -85,8 +85,8 @@ pub fn queue_tilemaps(
 
         let draw_tilemap_function = draw_functions.read().get_id::<DrawTilemap>().unwrap();
 
-        for (view_entity, msaa) in views.iter() {
-            let Some(transparent_phase) = transparent_render_phases.get_mut(&view_entity) else {
+        for (view, msaa) in views.iter() {
+            let Some(transparent_phase) = transparent_render_phases.get_mut(&view.retained_view_entity) else {
                 continue;
             };
 
@@ -146,17 +146,18 @@ pub fn queue_tilemaps(
                 // Process extracted chunks in parallel, updating their metadata.
                 let results: Vec<(ChunkKey, ChunkMeta)> = chonk_iter
                     .map(|(chunk, chunk_meta)| {
-                        let (key, mut chunk_meta) = if let Some((key, chunk_meta)) = chunk_meta {
-                            (key, chunk_meta)
-                        } else {
-                            ((*entity, chunk.origin), ChunkMeta::default())
+                        let (key, mut chunk_meta) = match chunk_meta {
+                            Some((key, chunk_meta)) => (key, chunk_meta),
+                            _ => ((*entity, chunk.origin), ChunkMeta::default()),
                         };
 
+                        let texture_size = uvec2(image_size.width, image_size.height);
+
                         chunk_meta.tile_size = tilemap.tile_size;
-                        chunk_meta.texture_size = image_size;
+                        chunk_meta.texture_size = texture_size;
                         chunk_meta.vertices.clear();
 
-                        let image_size = image_size.as_vec2();
+                        let image_size = texture_size.as_vec2();
 
                         let z = chunk.origin.z as f32;
 
@@ -287,7 +288,9 @@ pub fn queue_tilemaps(
                     entity: (batch_entity, *main_entity),
                     sort_key,
                     batch_range: 0..1,
-                    extra_index: PhaseItemExtraIndex::NONE,
+                    extracted_index: usize::MAX,
+                    extra_index: PhaseItemExtraIndex::None,
+                    indexed: false,
                 });
             }
         }

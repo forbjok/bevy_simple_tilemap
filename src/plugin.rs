@@ -3,19 +3,15 @@ use bevy::{
     core_pipeline::core_2d::Transparent2d,
     prelude::*,
     render::{
+        Render, RenderApp, RenderSet,
         render_phase::AddRenderCommand,
         render_resource::{Shader, SpecializedRenderPipelines},
-        view::{check_visibility, VisibilitySystems},
-        Render, RenderApp, RenderSet,
     },
 };
 
-use crate::{
-    render::{
-        self, draw::DrawTilemap, pipeline::TilemapPipeline, ExtractedTilemaps, ImageBindGroups, TilemapAssetEvents,
-        TilemapMeta, TILEMAP_SHADER_HANDLE,
-    },
-    tilemap::WithTileMap,
+use crate::render::{
+    self, ExtractedTilemaps, ImageBindGroups, TILEMAP_SHADER_HANDLE, TilemapAssetEvents, TilemapMeta,
+    draw::DrawTilemap, pipeline::TilemapPipeline,
 };
 
 #[derive(Default)]
@@ -31,11 +27,6 @@ impl Plugin for SimpleTileMapPlugin {
         app.add_systems(Update, crate::tilemap::update_chunks_system);
 
         load_internal_asset!(app, TILEMAP_SHADER_HANDLE, "render/tilemap.wgsl", Shader::from_wgsl);
-
-        app.add_systems(
-            PostUpdate,
-            check_visibility::<WithTileMap>.in_set(VisibilitySystems::CheckVisibility),
-        );
 
         if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app

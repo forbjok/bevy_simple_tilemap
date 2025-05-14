@@ -28,7 +28,7 @@ features = [
 [dev-dependencies.bevy]
 version = "0.16.0"
 default-features = false
-features = ["x11", "png", "wayland"]
+features = ["x11", "png", "wayland", "webgl2"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rayon = "1.10.0"

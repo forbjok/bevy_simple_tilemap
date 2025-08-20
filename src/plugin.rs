@@ -3,9 +3,7 @@ use bevy::{
     core_pipeline::core_2d::Transparent2d,
     prelude::*,
     render::{
-        Render, RenderApp, RenderSystems,
-        render_phase::AddRenderCommand,
-        render_resource::{Shader, SpecializedRenderPipelines},
+        Render, RenderApp, RenderSystems, render_phase::AddRenderCommand, render_resource::SpecializedRenderPipelines,
     },
 };
 

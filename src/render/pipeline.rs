@@ -2,6 +2,7 @@ use bevy::core_pipeline::core_2d::CORE_2D_DEPTH_FORMAT;
 use bevy::ecs::prelude::*;
 use bevy::ecs::system::SystemState;
 use bevy::image::BevyDefault;
+use bevy::mesh::VertexBufferLayout;
 use bevy::render::render_resource::binding_types::{sampler, texture_2d, uniform_buffer};
 use bevy::render::view::ViewUniform;
 use bevy::render::{render_resource::*, renderer::RenderDevice};

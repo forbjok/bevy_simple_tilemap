@@ -1,14 +1,14 @@
-use bevy::platform::time::Instant;
+use bevy::{
+    camera::visibility::{self, VisibilityClass},
+    platform::time::Instant,
+};
 
 use bitflags::bitflags;
 
 use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,
-    render::{
-        sync_world::SyncToRenderWorld,
-        view::{self, VisibilityClass},
-    },
+    render::sync_world::SyncToRenderWorld,
 };
 
 pub(crate) const CHUNK_WIDTH: u32 = 64;
@@ -43,7 +43,7 @@ pub struct Tile {
 
 #[derive(Component, Debug)]
 #[require(TileMapCache, Transform, Visibility, SyncToRenderWorld, VisibilityClass)]
-#[component(on_add = view::add_visibility_class::<Sprite>)]
+#[component(on_add = visibility::add_visibility_class::<TileMap>)]
 pub struct TileMap {
     pub image: Handle<Image>,
     pub texture_atlas_layout: Handle<TextureAtlasLayout>,

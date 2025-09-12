@@ -19,7 +19,7 @@ use super::*;
 
 pub fn extract_tilemap_events(
     mut events: ResMut<TilemapAssetEvents>,
-    mut image_events: Extract<EventReader<AssetEvent<Image>>>,
+    mut image_events: Extract<MessageReader<AssetEvent<Image>>>,
 ) {
     let TilemapAssetEvents { ref mut images } = *events;
     images.clear();
@@ -105,93 +105,93 @@ pub fn extract_tilemaps(
             continue;
         }
 
-        if let Some(texture_atlas) = texture_atlases.get(&tilemap.texture_atlas_layout) {
-            if images.contains(&tilemap.image) {
-                let (scale, _, _) = transform.to_scale_rotation_translation();
+        if let Some(texture_atlas) = texture_atlases.get(&tilemap.texture_atlas_layout)
+            && images.contains(&tilemap.image)
+        {
+            let (scale, _, _) = transform.to_scale_rotation_translation();
 
-                // Determine tile size in pixels from first sprite in TextureAtlas.
-                // It is assumed and mandated that all sprites in the sprite sheet are the same size.
-                let tile0_tex = texture_atlas.textures.first().unwrap();
-                let tile_size = uvec2(tile0_tex.width(), tile0_tex.height());
+            // Determine tile size in pixels from first sprite in TextureAtlas.
+            // It is assumed and mandated that all sprites in the sprite sheet are the same size.
+            let tile0_tex = texture_atlas.textures.first().unwrap();
+            let tile_size = uvec2(tile0_tex.width(), tile0_tex.height());
 
-                let chunk_pixel_size = uvec2(CHUNK_WIDTH, CHUNK_HEIGHT) * tile_size;
-                let chunk_pixel_size = chunk_pixel_size * scale.truncate().as_uvec2();
+            let chunk_pixel_size = uvec2(CHUNK_WIDTH, CHUNK_HEIGHT) * tile_size;
+            let chunk_pixel_size = chunk_pixel_size * scale.truncate().as_uvec2();
 
-                let chunk_iter = tilemap.chunks.iter();
+            let chunk_iter = tilemap.chunks.iter();
 
-                // Exclude chunks that are not visible
-                let chunks: Vec<_> = chunk_iter
-                    .filter_map(|(_, chunk)| {
-                        let chunk_translation =
-                            (chunk.origin.truncate().as_vec2() * tile_size.as_vec2()).extend(chunk.origin.z as f32);
-                        let chunk_translation = transform.mul(chunk_translation);
+            // Exclude chunks that are not visible
+            let chunks: Vec<_> = chunk_iter
+                .filter_map(|(_, chunk)| {
+                    let chunk_translation =
+                        (chunk.origin.truncate().as_vec2() * tile_size.as_vec2()).extend(chunk.origin.z as f32);
+                    let chunk_translation = transform.mul(chunk_translation);
 
-                        let chunk_rect = Rect {
-                            anchor: Anchor::BottomLeft,
-                            position: chunk_translation.truncate(),
-                            size: chunk_pixel_size.as_vec2(),
-                        };
+                    let chunk_rect = Rect {
+                        anchor: Anchor::BottomLeft,
+                        position: chunk_translation.truncate(),
+                        size: chunk_pixel_size.as_vec2(),
+                    };
 
-                        if camera_rects.iter().all(|cr| !cr.is_intersecting(&chunk_rect)) {
-                            // Chunk is outside the camera, skip it.
-                            return None;
-                        }
+                    if camera_rects.iter().all(|cr| !cr.is_intersecting(&chunk_rect)) {
+                        // Chunk is outside the camera, skip it.
+                        return None;
+                    }
 
-                        Some(chunk)
-                    })
-                    .collect();
+                    Some(chunk)
+                })
+                .collect();
 
-                let visible_chunks: Vec<IVec3> = chunks.iter().map(|c| c.origin).collect();
+            let visible_chunks: Vec<IVec3> = chunks.iter().map(|c| c.origin).collect();
 
-                #[cfg(target_arch = "wasm32")]
-                let chunk_iter = chunks.iter();
-                #[cfg(not(target_arch = "wasm32"))]
-                let chunk_iter = chunks.par_iter();
+            #[cfg(target_arch = "wasm32")]
+            let chunk_iter = chunks.iter();
+            #[cfg(not(target_arch = "wasm32"))]
+            let chunk_iter = chunks.par_iter();
 
-                // Extract chunks
-                let chunks: Vec<ExtractedChunk> = chunk_iter
-                    .filter_map(|chunk| {
-                        #[cfg(target_arch = "wasm32")]
-                        let tile_iter = chunk.tiles.iter();
-                        #[cfg(not(target_arch = "wasm32"))]
-                        let tile_iter = chunk.tiles.par_iter();
+            // Extract chunks
+            let chunks: Vec<ExtractedChunk> = chunk_iter
+                .filter_map(|chunk| {
+                    #[cfg(target_arch = "wasm32")]
+                    let tile_iter = chunk.tiles.iter();
+                    #[cfg(not(target_arch = "wasm32"))]
+                    let tile_iter = chunk.tiles.par_iter();
 
-                        let tiles: Vec<ExtractedTile> = tile_iter
-                            .enumerate()
-                            .filter_map(|(i, tile)| {
-                                if let Some(tile) = tile {
-                                    let rect = texture_atlas.textures[tile.sprite_index as usize];
+                    let tiles: Vec<ExtractedTile> = tile_iter
+                        .enumerate()
+                        .filter_map(|(i, tile)| {
+                            if let Some(tile) = tile {
+                                let rect = texture_atlas.textures[tile.sprite_index as usize];
 
-                                    Some(ExtractedTile {
-                                        pos: chunk.origin.truncate() + row_major_pos(i),
-                                        rect,
-                                        color: tile.color.into(),
-                                        flags: tile.flags,
-                                    })
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect();
-
-                        Some(ExtractedChunk {
-                            origin: chunk.origin,
-                            tiles,
+                                Some(ExtractedTile {
+                                    pos: chunk.origin.truncate() + row_major_pos(i),
+                                    rect,
+                                    color: tile.color.into(),
+                                    flags: tile.flags,
+                                })
+                            } else {
+                                None
+                            }
                         })
-                    })
-                    .collect();
+                        .collect();
 
-                extracted_tilemaps.tilemaps.insert(
-                    (entity, original_entity.into()),
-                    ExtractedTilemap {
-                        transform: *transform,
-                        image_handle_id: tilemap.image.id(),
-                        tile_size,
-                        chunks,
-                        visible_chunks,
-                    },
-                );
-            }
+                    Some(ExtractedChunk {
+                        origin: chunk.origin,
+                        tiles,
+                    })
+                })
+                .collect();
+
+            extracted_tilemaps.tilemaps.insert(
+                (entity, original_entity.into()),
+                ExtractedTilemap {
+                    transform: *transform,
+                    image_handle_id: tilemap.image.id(),
+                    tile_size,
+                    chunks,
+                    visible_chunks,
+                },
+            );
         }
     }
 }

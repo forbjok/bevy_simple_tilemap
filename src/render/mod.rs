@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use bevy::{
-    asset::weak_handle,
+    asset::uuid_handle,
     color::LinearRgba,
     math::{IVec2, IVec3, Mat4, URect, UVec2, Vec2},
     platform::collections::HashMap,
@@ -20,7 +20,7 @@ pub mod extract;
 pub mod pipeline;
 pub mod queue;
 
-pub const TILEMAP_SHADER_HANDLE: Handle<Shader> = weak_handle!("3f7c8913-f14a-40cb-b044-4916400481e2");
+pub const TILEMAP_SHADER_HANDLE: Handle<Shader> = uuid_handle!("3f7c8913-f14a-40cb-b044-4916400481e2");
 
 pub struct ExtractedTile {
     pub pos: IVec2,

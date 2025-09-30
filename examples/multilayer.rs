@@ -8,7 +8,7 @@ fn main() {
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        resolution: WindowResolution::new(1280.0, 720.0).with_scale_factor_override(1.0),
+                        resolution: WindowResolution::new(1280, 720).with_scale_factor_override(1.0),
                         ..Default::default()
                     }),
                     ..default()

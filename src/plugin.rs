@@ -3,9 +3,7 @@ use bevy::{
     core_pipeline::core_2d::Transparent2d,
     prelude::*,
     render::{
-        Render, RenderApp, RenderSet,
-        render_phase::AddRenderCommand,
-        render_resource::{Shader, SpecializedRenderPipelines},
+        Render, RenderApp, RenderSystems, render_phase::AddRenderCommand, render_resource::SpecializedRenderPipelines,
     },
 };
 
@@ -43,7 +41,7 @@ impl Plugin for SimpleTileMapPlugin {
                         render::extract::extract_tilemap_events,
                     ),
                 )
-                .add_systems(Render, render::queue::queue_tilemaps.in_set(RenderSet::Queue));
+                .add_systems(Render, render::queue::queue_tilemaps.in_set(RenderSystems::Queue));
         };
     }
 

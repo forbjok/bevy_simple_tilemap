@@ -2,6 +2,7 @@ use bevy::core_pipeline::core_2d::CORE_2D_DEPTH_FORMAT;
 use bevy::ecs::prelude::*;
 use bevy::ecs::system::SystemState;
 use bevy::image::BevyDefault;
+use bevy::mesh::VertexBufferLayout;
 use bevy::render::render_resource::binding_types::{sampler, texture_2d, uniform_buffer};
 use bevy::render::view::ViewUniform;
 use bevy::render::{render_resource::*, renderer::RenderDevice};
@@ -101,14 +102,14 @@ impl SpecializedRenderPipeline for TilemapPipeline {
         RenderPipelineDescriptor {
             vertex: VertexState {
                 shader: TILEMAP_SHADER_HANDLE,
-                entry_point: "vertex".into(),
+                entry_point: Some("vertex".into()),
                 shader_defs: shader_defs.clone(),
                 buffers: vec![vertex_buffer_layout],
             },
             fragment: Some(FragmentState {
                 shader: TILEMAP_SHADER_HANDLE,
                 shader_defs,
-                entry_point: "fragment".into(),
+                entry_point: Some("fragment".into()),
                 targets: vec![Some(ColorTargetState {
                     format: TextureFormat::bevy_default(),
                     blend: Some(BlendState::ALPHA_BLENDING),

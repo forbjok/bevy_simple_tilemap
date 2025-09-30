@@ -248,7 +248,7 @@ pub fn queue_tilemaps(
 
                 chunk_meta.tilemap_gpu_data.clear();
                 chunk_meta.tilemap_gpu_data.push(&TilemapGpuData {
-                    transform: tilemap_transform.compute_matrix(),
+                    transform: tilemap_transform.to_matrix(),
                     tile_size: chunk_meta.tile_size.as_vec2(),
                     texture_size: chunk_meta.texture_size.as_vec2(),
                 });

@@ -1,6 +1,6 @@
 [package]
 name = "bevy_simple_tilemap"
-version = "0.17.1"
+version = "0.18.0"
 authors = ["Forb.Jok <forbjok@gmail.com>"]
 edition = "2024"
 description = "Refreshingly simple tilemap implementation for Bevy Engine."

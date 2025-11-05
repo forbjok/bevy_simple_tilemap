@@ -1,19 +1,18 @@
 use bevy::core_pipeline::core_2d::CORE_2D_DEPTH_FORMAT;
 use bevy::ecs::prelude::*;
-use bevy::ecs::system::SystemState;
 use bevy::image::BevyDefault;
 use bevy::mesh::VertexBufferLayout;
 use bevy::render::render_resource::binding_types::{sampler, texture_2d, uniform_buffer};
+use bevy::render::render_resource::*;
 use bevy::render::view::ViewUniform;
-use bevy::render::{render_resource::*, renderer::RenderDevice};
 
 use super::*;
 
 #[derive(Resource)]
 pub struct TilemapPipeline {
-    pub(super) view_layout: BindGroupLayout,
-    pub(super) material_layout: BindGroupLayout,
-    pub(super) tilemap_gpu_data_layout: BindGroupLayout,
+    pub(super) view_layout: BindGroupLayoutDescriptor,
+    pub(super) material_layout: BindGroupLayoutDescriptor,
+    pub(super) tilemap_gpu_data_layout: BindGroupLayoutDescriptor,
 }
 
 bitflags::bitflags! {
@@ -44,16 +43,13 @@ impl TilemapPipelineKey {
 }
 
 impl FromWorld for TilemapPipeline {
-    fn from_world(world: &mut World) -> Self {
-        let mut system_state: SystemState<(Res<RenderDevice>,)> = SystemState::new(world);
-        let (render_device,) = system_state.get_mut(world);
-
-        let view_layout = render_device.create_bind_group_layout(
+    fn from_world(_world: &mut World) -> Self {
+        let view_layout = BindGroupLayoutDescriptor::new(
             "tilemap_view_layout",
             &BindGroupLayoutEntries::single(ShaderStages::VERTEX_FRAGMENT, uniform_buffer::<ViewUniform>(true)),
         );
 
-        let material_layout = render_device.create_bind_group_layout(
+        let material_layout = BindGroupLayoutDescriptor::new(
             "tilemap_material_layout",
             &BindGroupLayoutEntries::sequential(
                 ShaderStages::FRAGMENT,
@@ -64,7 +60,7 @@ impl FromWorld for TilemapPipeline {
             ),
         );
 
-        let tilemap_gpu_data_layout = render_device.create_bind_group_layout(
+        let tilemap_gpu_data_layout = BindGroupLayoutDescriptor::new(
             "tilemap_tilemap_gpu_data_layout",
             &BindGroupLayoutEntries::sequential(
                 ShaderStages::VERTEX_FRAGMENT,

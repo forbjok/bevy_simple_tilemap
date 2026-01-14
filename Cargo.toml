@@ -14,7 +14,7 @@ bitflags = "2.10.0"
 bytemuck = "1.24.0"
 
 [dependencies.bevy]
-version = "0.18.0-rc.2"
+version = "0.18.0"
 default-features = false
 features = [
   "bevy_asset",
@@ -26,7 +26,7 @@ features = [
 ]
 
 [dev-dependencies.bevy]
-version = "0.18.0-rc.2"
+version = "0.18.0"
 default-features = false
 features = ["bevy_text", "gamepad", "png", "wayland", "webgl2", "x11"]
 

@@ -76,7 +76,7 @@ pub fn queue_tilemaps(
 
         tilemap_meta.view_bind_group = Some(render_device.create_bind_group(
             Some("tilemap_view_bind_group"),
-            &tilemap_pipeline.view_layout,
+            &pipeline_cache.get_bind_group_layout(&tilemap_pipeline.view_layout),
             &[BindGroupEntry {
                 binding: 0,
                 resource: view_binding,
@@ -115,7 +115,7 @@ pub fn queue_tilemaps(
                         .or_insert_with(|| {
                             render_device.create_bind_group(
                                 Some("tilemap_material_bind_group"),
-                                &tilemap_pipeline.material_layout,
+                                &pipeline_cache.get_bind_group_layout(&tilemap_pipeline.material_layout),
                                 &BindGroupEntries::sequential((&gpu_image.texture_view, &gpu_image.sampler)),
                             )
                         });
@@ -258,7 +258,7 @@ pub fn queue_tilemaps(
 
                 chunk_meta.tilemap_gpu_data_bind_group = Some(render_device.create_bind_group(
                     Some("tilemap_gpu_data_bind_group"),
-                    &tilemap_pipeline.tilemap_gpu_data_layout,
+                    &pipeline_cache.get_bind_group_layout(&tilemap_pipeline.tilemap_gpu_data_layout),
                     &[BindGroupEntry {
                         binding: 0,
                         resource: chunk_meta.tilemap_gpu_data.binding().unwrap(),

@@ -71,9 +71,138 @@ pub fn queue_tilemaps(
         };
     }
 
-    if let Some(view_binding) = view_uniforms.uniforms.binding() {
-        let tilemap_meta = &mut tilemap_meta;
+    let tilemap_meta = &mut tilemap_meta;
+    let tilemaps = &mut extracted_tilemaps.tilemaps;
+    let image_bind_groups = &mut *image_bind_groups;
 
+    let mut visible_chunks: Vec<(Entity, IVec3)> = Vec::new();
+    let mut tilemap_transforms: HashMap<Entity, GlobalTransform> = HashMap::default();
+    let mut tilemap_image_handle_ids: HashMap<Entity, AssetId<Image>> = HashMap::default();
+    let mut tilemap_main_entities: HashMap<Entity, MainEntity> = HashMap::default();
+
+    for ((entity, main_entity), tilemap) in tilemaps.iter_mut() {
+        let image_size;
+        // Set-up a new possible batch
+        if let Some(gpu_image) = gpu_images.get(tilemap.image_handle_id) {
+            image_size = gpu_image.texture_descriptor.size;
+
+            image_bind_groups
+                .values
+                .entry(tilemap.image_handle_id)
+                .or_insert_with(|| {
+                    render_device.create_bind_group(
+                        Some("tilemap_material_bind_group"),
+                        &pipeline_cache.get_bind_group_layout(&tilemap_pipeline.material_layout),
+                        &BindGroupEntries::sequential((&gpu_image.texture_view, &gpu_image.sampler)),
+                    )
+                });
+        } else {
+            // Skip this item if the texture is not ready
+            continue;
+        }
+
+        // Yank each chunk's GPU metadata (if one exists) out of the HashMap
+        // so that we can pass it into the parallel iterator later.
+        // Maybe there is a cleaner way of doing this, but I can't think of one
+        // so this will have to do for now.
+        let chonks: Vec<(ExtractedChunk, Option<(ChunkKey, ChunkMeta)>)> = tilemap
+            .chunks
+            .drain(..)
+            .map(|c| {
+                let entry = tilemap_meta.chunks.remove_entry(&(*entity, c.origin));
+
+                (c, entry)
+            })
+            .collect();
+
+        #[cfg(target_arch = "wasm32")]
+        let chonk_iter = chonks.into_iter();
+        #[cfg(not(target_arch = "wasm32"))]
+        let chonk_iter = chonks.into_par_iter();
+
+        // Process extracted chunks in parallel, updating their metadata.
+        let results: Vec<(ChunkKey, ChunkMeta)> = chonk_iter
+            .map(|(chunk, chunk_meta)| {
+                let (key, mut chunk_meta) = match chunk_meta {
+                    Some((key, chunk_meta)) => (key, chunk_meta),
+                    _ => ((*entity, chunk.origin), ChunkMeta::default()),
+                };
+
+                let texture_size = uvec2(image_size.width, image_size.height);
+
+                chunk_meta.tile_size = tilemap.tile_size;
+                chunk_meta.texture_size = texture_size;
+                chunk_meta.vertices.clear();
+
+                let image_size = texture_size.as_vec2();
+
+                let z = chunk.origin.z as f32;
+
+                for tile in chunk.tiles.iter() {
+                    // Calculate vertex data for this item
+
+                    let mut uvs = QUAD_UVS;
+
+                    if tile.flags.contains(TileFlags::FLIP_X) {
+                        uvs = [uvs[1], uvs[0], uvs[3], uvs[2]];
+                    }
+
+                    if tile.flags.contains(TileFlags::FLIP_Y) {
+                        uvs = [uvs[3], uvs[2], uvs[1], uvs[0]];
+                    }
+
+                    let tile_uvs = uvs;
+
+                    // If a rect is specified, adjust UVs and the size of the quad
+                    let rect = tile.rect.as_rect();
+                    let quad_size = rect.size();
+                    for uv in &mut uvs {
+                        *uv = (rect.min + *uv * quad_size) / image_size;
+                    }
+
+                    let tile_pos = tile.pos.as_vec2() * quad_size;
+
+                    // Apply size and global transform
+                    let positions =
+                        QUAD_VERTEX_POSITIONS.map(|quad_pos| (tile_pos + (quad_pos * quad_size)).extend(z).into());
+
+                    // Store the vertex data and add the item to the render phase
+                    let color = tile.color.to_f32_array();
+
+                    for i in QUAD_INDICES.iter() {
+                        chunk_meta.vertices.push(TilemapVertex {
+                            position: positions[*i],
+                            uv: uvs[*i].into(),
+                            tile_uv: tile_uvs[*i].into(),
+                            color,
+                        });
+                    }
+                }
+
+                (key, chunk_meta)
+            })
+            .collect();
+
+        // (Re-)Insert chunk metadata into the HashMap
+        for (key, chunk_meta) in results {
+            tilemap_meta.chunks.insert(key, chunk_meta);
+        }
+
+        visible_chunks.extend(tilemap.visible_chunks.drain(..).map(|pos| (*entity, pos)));
+        tilemap_transforms.insert(*entity, tilemap.transform);
+        tilemap_image_handle_ids.insert(*entity, tilemap.image_handle_id);
+        tilemap_main_entities.insert(*entity, *main_entity);
+    }
+
+    // Clean out cached data for chunks that are not visible anymore
+    tilemap_meta.chunks.retain(|k, _| visible_chunks.contains(k));
+
+    // If there are no visible chunks, return immediately
+    if tilemap_meta.chunks.is_empty() {
+        return;
+    }
+
+    if let Some(view_binding) = view_uniforms.uniforms.binding() {
         tilemap_meta.view_bind_group = Some(render_device.create_bind_group(
             Some("tilemap_view_bind_group"),
             &pipeline_cache.get_bind_group_layout(&tilemap_pipeline.view_layout),
@@ -92,130 +221,6 @@ pub fn queue_tilemaps(
 
             let key = TilemapPipelineKey::from_msaa_samples(msaa.samples());
             let pipeline = pipelines.specialize(&pipeline_cache, &tilemap_pipeline, key);
-
-            let tilemaps = &mut extracted_tilemaps.tilemaps;
-            let image_bind_groups = &mut *image_bind_groups;
-
-            transparent_phase.items.reserve(tilemaps.len());
-
-            let mut visible_chunks: Vec<(Entity, IVec3)> = Vec::new();
-            let mut tilemap_transforms: HashMap<Entity, GlobalTransform> = HashMap::default();
-            let mut tilemap_image_handle_ids: HashMap<Entity, AssetId<Image>> = HashMap::default();
-            let mut tilemap_main_entities: HashMap<Entity, MainEntity> = HashMap::default();
-
-            for ((entity, main_entity), tilemap) in tilemaps.iter_mut() {
-                let image_size;
-                // Set-up a new possible batch
-                if let Some(gpu_image) = gpu_images.get(tilemap.image_handle_id) {
-                    image_size = gpu_image.size;
-
-                    image_bind_groups
-                        .values
-                        .entry(tilemap.image_handle_id)
-                        .or_insert_with(|| {
-                            render_device.create_bind_group(
-                                Some("tilemap_material_bind_group"),
-                                &pipeline_cache.get_bind_group_layout(&tilemap_pipeline.material_layout),
-                                &BindGroupEntries::sequential((&gpu_image.texture_view, &gpu_image.sampler)),
-                            )
-                        });
-                } else {
-                    // Skip this item if the texture is not ready
-                    continue;
-                }
-
-                // Yank each chunk's GPU metadata (if one exists) out of the HashMap
-                // so that we can pass it into the parallel iterator later.
-                // Maybe there is a cleaner way of doing this, but I can't think of one
-                // so this will have to do for now.
-                let chonks: Vec<(ExtractedChunk, Option<(ChunkKey, ChunkMeta)>)> = tilemap
-                    .chunks
-                    .drain(..)
-                    .map(|c| {
-                        let entry = tilemap_meta.chunks.remove_entry(&(*entity, c.origin));
-
-                        (c, entry)
-                    })
-                    .collect();
-
-                #[cfg(target_arch = "wasm32")]
-                let chonk_iter = chonks.into_iter();
-                #[cfg(not(target_arch = "wasm32"))]
-                let chonk_iter = chonks.into_par_iter();
-
-                // Process extracted chunks in parallel, updating their metadata.
-                let results: Vec<(ChunkKey, ChunkMeta)> = chonk_iter
-                    .map(|(chunk, chunk_meta)| {
-                        let (key, mut chunk_meta) = match chunk_meta {
-                            Some((key, chunk_meta)) => (key, chunk_meta),
-                            _ => ((*entity, chunk.origin), ChunkMeta::default()),
-                        };
-
-                        let texture_size = uvec2(image_size.width, image_size.height);
-
-                        chunk_meta.tile_size = tilemap.tile_size;
-                        chunk_meta.texture_size = texture_size;
-                        chunk_meta.vertices.clear();
-
-                        let image_size = texture_size.as_vec2();
-
-                        let z = chunk.origin.z as f32;
-
-                        for tile in chunk.tiles.iter() {
-                            // Calculate vertex data for this item
-
-                            let mut uvs = QUAD_UVS;
-
-                            if tile.flags.contains(TileFlags::FLIP_X) {
-                                uvs = [uvs[1], uvs[0], uvs[3], uvs[2]];
-                            }
-
-                            if tile.flags.contains(TileFlags::FLIP_Y) {
-                                uvs = [uvs[3], uvs[2], uvs[1], uvs[0]];
-                            }
-
-                            let tile_uvs = uvs;
-
-                            // If a rect is specified, adjust UVs and the size of the quad
-                            let rect = tile.rect.as_rect();
-                            let quad_size = rect.size();
-                            for uv in &mut uvs {
-                                *uv = (rect.min + *uv * quad_size) / image_size;
-                            }
-
-                            let tile_pos = tile.pos.as_vec2() * quad_size;
-
-                            // Apply size and global transform
-                            let positions = QUAD_VERTEX_POSITIONS
-                                .map(|quad_pos| (tile_pos + (quad_pos * quad_size)).extend(z).into());
-
-                            // Store the vertex data and add the item to the render phase
-                            let color = tile.color.to_f32_array();
-
-                            for i in QUAD_INDICES.iter() {
-                                chunk_meta.vertices.push(TilemapVertex {
-                                    position: positions[*i],
-                                    uv: uvs[*i].into(),
-                                    tile_uv: tile_uvs[*i].into(),
-                                    color,
-                                });
-                            }
-                        }
-
-                        (key, chunk_meta)
-                    })
-                    .collect();
-
-                // (Re-)Insert chunk metadata into the HashMap
-                for (key, chunk_meta) in results {
-                    tilemap_meta.chunks.insert(key, chunk_meta);
-                }
-
-                visible_chunks.extend(tilemap.visible_chunks.drain(..).map(|pos| (*entity, pos)));
-                tilemap_transforms.insert(*entity, tilemap.transform);
-                tilemap_image_handle_ids.insert(*entity, tilemap.image_handle_id);
-                tilemap_main_entities.insert(*entity, *main_entity);
-            }
 
             let mut sorted_chunks: Vec<_> = tilemap_meta
                 .chunks
@@ -241,6 +246,8 @@ pub fn queue_tilemaps(
                     Some(other) => other,
                 }
             });
+
+            transparent_phase.items.reserve(sorted_chunks.len());
 
             // Render all chunks.
             for (key, tilemap_transform, chunk_meta) in sorted_chunks.into_iter() {
@@ -282,7 +289,7 @@ pub fn queue_tilemaps(
 
                 let main_entity = tilemap_main_entities.get(tilemap_entity).unwrap();
 
-                transparent_phase.add(Transparent2d {
+                transparent_phase.add_transient(Transparent2d {
                     draw_function: draw_tilemap_function,
                     pipeline,
                     entity: (batch_entity, *main_entity),

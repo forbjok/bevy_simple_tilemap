@@ -100,7 +100,7 @@ pub fn extract_tilemaps(
 
     extracted_tilemaps.tilemaps.clear();
 
-    for (original_entity, entity, view_visibility, tilemap, transform) in tilemap_query.iter() {
+    for (main_entity, render_entity, view_visibility, tilemap, transform) in tilemap_query.iter() {
         if !view_visibility.get() {
             continue;
         }
@@ -183,7 +183,7 @@ pub fn extract_tilemaps(
                 .collect();
 
             extracted_tilemaps.tilemaps.insert(
-                (entity, original_entity.into()),
+                (render_entity, main_entity.into()),
                 ExtractedTilemap {
                     transform: *transform,
                     image_handle_id: tilemap.image.id(),

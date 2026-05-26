@@ -1,6 +1,5 @@
 use bevy::core_pipeline::core_2d::CORE_2D_DEPTH_FORMAT;
 use bevy::ecs::prelude::*;
-use bevy::image::BevyDefault;
 use bevy::mesh::VertexBufferLayout;
 use bevy::render::render_resource::binding_types::{sampler, texture_2d, uniform_buffer};
 use bevy::render::render_resource::*;
@@ -107,7 +106,7 @@ impl SpecializedRenderPipeline for TilemapPipeline {
                 shader_defs,
                 entry_point: Some("fragment".into()),
                 targets: vec![Some(ColorTargetState {
-                    format: TextureFormat::bevy_default(),
+                    format: TextureFormat::Rgba8UnormSrgb,
                     blend: Some(BlendState::ALPHA_BLENDING),
                     write_mask: ColorWrites::ALL,
                 })],
@@ -117,6 +116,7 @@ impl SpecializedRenderPipeline for TilemapPipeline {
                 self.material_layout.clone(),
                 self.tilemap_gpu_data_layout.clone(),
             ],
+            immediate_size: 0,
             primitive: PrimitiveState {
                 front_face: FrontFace::Ccw,
                 cull_mode: None,
@@ -128,8 +128,8 @@ impl SpecializedRenderPipeline for TilemapPipeline {
             },
             depth_stencil: Some(DepthStencilState {
                 format: CORE_2D_DEPTH_FORMAT,
-                depth_write_enabled: false,
-                depth_compare: CompareFunction::GreaterEqual,
+                depth_write_enabled: Some(false),
+                depth_compare: Some(CompareFunction::GreaterEqual),
                 stencil: StencilState {
                     front: StencilFaceState::IGNORE,
                     back: StencilFaceState::IGNORE,
@@ -148,7 +148,6 @@ impl SpecializedRenderPipeline for TilemapPipeline {
                 alpha_to_coverage_enabled: false,
             },
             label: Some("tilemap_pipeline".into()),
-            push_constant_ranges: Vec::new(),
             zero_initialize_workgroup_memory: false,
         }
     }

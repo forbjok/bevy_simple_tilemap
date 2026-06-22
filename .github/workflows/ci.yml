@@ -32,7 +32,7 @@ jobs:
           toolchain: stable
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install required packages
       if: matrix.os == 'ubuntu-latest'

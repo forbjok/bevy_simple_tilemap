@@ -100,6 +100,7 @@ impl SpecializedRenderPipeline for TilemapPipeline {
                 entry_point: Some("vertex".into()),
                 shader_defs: shader_defs.clone(),
                 buffers: vec![vertex_buffer_layout],
+                constants: Default::default(),
             },
             fragment: Some(FragmentState {
                 shader: TILEMAP_SHADER_HANDLE,
@@ -110,6 +111,7 @@ impl SpecializedRenderPipeline for TilemapPipeline {
                     blend: Some(BlendState::ALPHA_BLENDING),
                     write_mask: ColorWrites::ALL,
                 })],
+                constants: Default::default(),
             }),
             layout: vec![
                 self.view_layout.clone(),

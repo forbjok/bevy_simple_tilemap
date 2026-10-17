@@ -24,7 +24,7 @@ impl Plugin for SimpleTileMapPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, crate::tilemap::update_chunks_system);
 
-        load_internal_asset!(app, TILEMAP_SHADER_HANDLE, "render/tilemap.wgsl", Shader::from_wgsl);
+        load_internal_asset!(app, TILEMAP_SHADER_HANDLE, "render/tilemap.wesl", Shader::from_wesl);
 
         if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
             render_app
